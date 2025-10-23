@@ -1,0 +1,185 @@
+pub mod handlers;
+pub mod implementations;
+pub mod models;
+pub mod schemas;
+pub mod services;
+
+use std::net::SocketAddr;
+use std::result::Result::Ok;
+
+use axum::{
+    extract::{ConnectInfo, DefaultBodyLimit},
+    http::{self, HeaderName, HeaderValue, Method, StatusCode, header},
+    response::IntoResponse,
+};
+use axum_extra::extract::cookie::Key;
+use time::macros::format_description;
+use tokio::signal;
+use tower_http::{
+    cors::CorsLayer,
+    trace::{DefaultOnResponse, TraceLayer},
+};
+use tracing::info;
+use tracing_subscriber::{
+    EnvFilter, fmt::time::LocalTime, layer::SubscriberExt, util::SubscriberInitExt,
+};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    match dotenvy::dotenv() {
+        Ok(path) => {
+            info!("Loaded .env file from {}", path.display());
+        }
+        Err(dotenvy::Error::Io(ref err)) if err.kind() == std::io::ErrorKind::NotFound => {
+            println!(".env file not found, continuing without it");
+        }
+        Err(e) => {
+            println!("Couldn't load .env file: {}", e);
+        }
+    }
+
+    let config = Config::init().await;
+
+    let filter = EnvFilter::new("pinespot_axum=debug,tower_http=warn,hyper=warn,reqwest=warn");
+    let timer = LocalTime::new(format_description!(
+        "[year]-[month]-[day] [hour]:[minute]:[second]"
+    ));
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_file(true)
+                .with_line_number(true)
+                .with_timer(timer),
+            // .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NEW),
+        )
+        .init();
+
+    let rustls_config = build_rustls_config(&config)?;
+    let database = Database::new(&config).await?;
+    let redis = Redis::new(&config).await?;
+    let qdrant = build_qdrant(&config).await?;
+    let kubernetes = Kubernetes::new(&config).await?;
+    let key = Key::from(config.key.as_ref().unwrap().as_bytes());
+    let google_oauth_client = build_google_oauth_client(&config)?;
+    let github_oauth_client = build_github_oauth_client(&config)?;
+    let http_client = reqwest::ClientBuilder::new()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let s3 = build_s3(&config)?;
+    let gcs = build_gcs(&config)?;
+
+    let app_state = AppState {
+        rustls_config,
+        kubernetes,
+        database,
+        redis,
+        qdrant,
+        config: config.clone(),
+        key,
+        google_oauth_client,
+        github_oauth_client,
+        http_client,
+        s3,
+        gcs,
+    };
+
+    let cors = CorsLayer::new()
+        .allow_origin([
+            HeaderValue::from_static("http://127.0.0.1:3000"),
+            HeaderValue::from_static("http://localhost:3000"),
+            HeaderValue::from_static("http://127.0.0.1:5173"),
+            HeaderValue::from_static("http://localhost:5173"),
+            HeaderValue::from_static("https://pinespot.uz"),
+        ])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_credentials(true)
+        .allow_headers([
+            header::AUTHORIZATION,
+            header::CONTENT_TYPE,
+            header::ACCEPT,
+            // header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderName::from_static("x-requested-with"),
+        ]);
+
+    let tracing_layer = TraceLayer::new_for_http()
+        .on_request(|request: &http::Request<_>, _span: &tracing::Span| {
+            let method = request.method();
+            let uri = request.uri();
+            let matched_path = request
+                .extensions()
+                .get::<axum::extract::MatchedPath>()
+                .map(|p| p.as_str())
+                .unwrap_or("<unknown>");
+
+            if uri.query().is_some() {
+                info!("{} {} {}", method, matched_path, uri);
+            } else {
+                info!("{} {}", method, matched_path);
+            }
+        })
+        .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
+
+    let app = axum::Router::new()
+        .merge(listings::routes())
+        .merge(users::routes())
+        .fallback(not_found_handler)
+        .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
+        .layer(cors)
+        .layer(tracing_layer)
+        .with_state(app_state);
+
+    // Run Axum server
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8001));
+    info!("Server running on port {:#?}", addr);
+
+    let listener = tokio::net::TcpListener::bind(config.server_addres)
+        .await
+        .unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .unwrap();
+
+    Ok(())
+}
+
+async fn not_found_handler(ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+    println!("Client with {} connected", addr);
+    (StatusCode::NOT_FOUND, "nothing to see here")
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+}
