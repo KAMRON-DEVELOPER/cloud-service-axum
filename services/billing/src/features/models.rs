@@ -43,6 +43,7 @@ pub struct BillingRecord {
     pub id: Uuid,
     pub user_id: Uuid,
     pub deployment_id: Option<Uuid>,
+    pub resources_snapshot: serde_json::Value,
     pub cpu_millicores: i32,
     pub memory_mb: i32,
     pub cost_per_hour: BigDecimal,
