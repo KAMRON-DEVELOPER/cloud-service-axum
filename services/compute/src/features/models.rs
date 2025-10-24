@@ -1,81 +1,76 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Type};
+use sqlx::FromRow;
 use uuid::Uuid;
 
-// ============================================================================
-// K3s-Specific Resource Models
-// ============================================================================
-
-#[derive(Type, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(sqlx::Type, Serialize, Deserialize, Debug, Clone, Copy)]
 #[sqlx(type_name = "deployment_status", rename_all = "lowercase")]
 pub enum DeploymentStatus {
     Pending,
     Running,
+    Succeeded,
     Failed,
-    Stopped,
-    Deleted,
+    Terminated,
 }
 
-/// User deployments (containers/pods running on K3s)
+#[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
+pub struct Project {
+    pub id: Uuid,
+    pub owner_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
+pub struct Job {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub name: String,
+    pub image: String,
+    pub command: Option<String>,
+    pub status: DeploymentStatus,
+    pub started_at: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct Deployment {
     pub id: Uuid,
     pub user_id: Uuid,
-    pub organization_id: Option<Uuid>,
-
-    // K3s identifiers
     pub name: String,
-    pub namespace: String, // Each user gets their own namespace
-    pub k8s_deployment_name: String,
-
-    // Container config
-    pub image: String, // e.g., "nginx:latest", "user/custom-app:v1"
+    pub image: String,
+    pub env_vars: serde_json::Value,
     pub replicas: i32,
-    pub port: i32,
-    pub env_vars: Option<serde_json::Value>, // JSON of env variables
-
-    // Resource limits
-    pub cpu_limit: Option<String>,    // e.g., "500m"
-    pub memory_limit: Option<String>, // e.g., "512Mi"
-    pub cpu_request: Option<String>,
-    pub memory_request: Option<String>,
-
-    // Status
-    pub status: DeploymentStatus,
-    pub status_message: Option<String>,
-    pub ready_replicas: i32,
-
-    // Networking
-    pub internal_url: Option<String>, // e.g., "service.namespace.svc.cluster.local"
-    pub external_url: Option<String>, // If exposed via ingress
-
+    pub cpu_limit_millicores: i32,
+    pub memory_limit_mb: i32,
+    pub status: String,
+    pub cluster_namespace: String,
+    pub cluster_deployment_name: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub deleted_at: Option<DateTime<Utc>>,
 }
 
-/// Resource quotas per user/org
 #[derive(FromRow, Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ResourceQuota {
+pub struct DeploymentEvent {
     pub id: Uuid,
-    pub user_id: Option<Uuid>,
-    pub organization_id: Option<Uuid>,
-
-    // Limits
-    pub max_deployments: i32,
-    pub max_cpu: String,     // e.g., "4000m" (4 CPUs)
-    pub max_memory: String,  // e.g., "8Gi"
-    pub max_storage: String, // e.g., "50Gi"
-
-    // Current usage (updated periodically)
-    pub used_cpu: Option<String>,
-    pub used_memory: Option<String>,
-    pub used_storage: Option<String>,
-
+    pub deployment_id: Uuid,
+    pub event_type: String,
+    pub message: Option<String>,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(FromRow, Serialize, Deserialize, Debug)]
+pub struct BillingRecord {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub deployment_id: Option<Uuid>,
+    pub cpu_millicores: i32,
+    pub memory_mb: i32,
+    pub cost_per_hour: f64,
+    pub hours_used: f64,
+    pub total_cost: f64,
+    pub charged_at: DateTime<Utc>,
 }

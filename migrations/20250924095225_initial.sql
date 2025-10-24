@@ -1,190 +1,147 @@
 -- Enable UUID support
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
--- =====================
--- ENUM TYPES (Idempotent Creation)
--- =====================
-DO $$ BEGIN CREATE TYPE user_role AS ENUM ('admin', 'regular');
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
-DO $$ BEGIN CREATE TYPE user_status AS ENUM ('active', 'inactive');
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
-DO $$ BEGIN CREATE TYPE apartment_condition AS ENUM ('new', 'repaired', 'old');
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
-DO $$ BEGIN CREATE TYPE sale_type AS ENUM ('buy', 'rent');
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
-DO $$ BEGIN CREATE TYPE provider AS ENUM ('google', 'github', 'email');
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
--- =====================
--- HELPER FUNCTION FOR UPDATED_AT
--- =====================
-CREATE OR REPLACE FUNCTION trigger_set_timestamp() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW();
-RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
--- =====================
--- OAUTH USERS
--- =====================
-CREATE TABLE IF NOT EXISTS oauth_users (
-    id VARCHAR(255) PRIMARY KEY,
-    provider provider NOT NULL,
-    username VARCHAR(50),
-    full_name VARCHAR(50),
-    email VARCHAR(100),
-    phone_number VARCHAR(50),
-    password TEXT,
-    picture TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_oauth_email UNIQUE(email),
-    CONSTRAINT uq_oauth_phone UNIQUE(phone_number)
+-- ======================
+-- ENUM TYPES
+-- ======================
+DO $$ BEGIN CREATE TYPE deployment_status AS ENUM (
+    'pending',
+    'running',
+    'succeeded',
+    'failed',
+    'terminated'
 );
--- =====================
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN CREATE TYPE plan_type AS ENUM ('free', 'basic', 'pro');
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+-- ======================
 -- USERS
--- =====================
+-- ======================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    phone_number VARCHAR(50) NOT NULL,
-    password TEXT NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT,
     picture TEXT,
-    role user_role NOT NULL DEFAULT 'regular',
-    status user_status NOT NULL DEFAULT 'active',
-    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    oauth_user_id VARCHAR(255) REFERENCES oauth_users(id) ON DELETE
-    SET NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    email_verified BOOLEAN DEFAULT FALSE,
+    credit_balance NUMERIC(12, 2) NOT NULL DEFAULT 50.00,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TRIGGER set_users_timestamp BEFORE
-UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- APARTMENTS
--- =====================
-CREATE TABLE IF NOT EXISTS apartments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    rooms INTEGER NOT NULL,
-    beds INTEGER NOT NULL,
-    baths INTEGER NOT NULL,
-    area DOUBLE PRECISION NOT NULL,
-    apartment_floor INTEGER NOT NULL,
-    total_building_floors INTEGER NOT NULL,
-    condition apartment_condition NOT NULL,
-    sale_type sale_type NOT NULL,
-    requirements TEXT,
-    furnished BOOLEAN NOT NULL,
-    pets_allowed BOOLEAN NOT NULL,
-    has_elevator BOOLEAN NOT NULL,
-    has_garden BOOLEAN NOT NULL,
-    has_parking BOOLEAN NOT NULL,
-    has_balcony BOOLEAN NOT NULL,
-    has_ac BOOLEAN NOT NULL,
-    has_heating BOOLEAN NOT NULL,
-    distance_to_kindergarten INTEGER NOT NULL,
-    distance_to_school INTEGER NOT NULL,
-    distance_to_hospital INTEGER NOT NULL,
-    distance_to_metro INTEGER NOT NULL,
-    distance_to_bus_stop INTEGER NOT NULL,
-    distance_to_shopping INTEGER NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TRIGGER set_apartments_timestamp BEFORE
-UPDATE ON apartments FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- APARTMENT AMENITIES
--- =====================
-CREATE TABLE IF NOT EXISTS apartment_amenities (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    apartment_id UUID NOT NULL REFERENCES apartments(id) ON DELETE CASCADE,
-    amenity VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(apartment_id, amenity)
-);
-CREATE TRIGGER set_apartment_amenities_timestamp BEFORE
-UPDATE ON apartment_amenities FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- APARTMENT PICTURES
--- =====================
-CREATE TABLE IF NOT EXISTS apartment_pictures (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    apartment_id UUID NOT NULL REFERENCES apartments(id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
-    is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE UNIQUE INDEX one_primary_picture_per_apartment ON apartment_pictures (apartment_id)
-WHERE is_primary;
-CREATE TRIGGER set_apartment_pictures_timestamp BEFORE
-UPDATE ON apartment_pictures FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- ADDRESSES
--- =====================
-CREATE TABLE IF NOT EXISTS addresses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    apartment_id UUID NOT NULL UNIQUE REFERENCES apartments(id) ON DELETE CASCADE,
-    street_address TEXT NOT NULL,
-    city VARCHAR(100) NOT NULL,
-    state_or_region VARCHAR(100) NOT NULL,
-    county_or_district VARCHAR(100),
-    postal_code VARCHAR(20) NOT NULL,
-    country VARCHAR(100) NOT NULL,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TRIGGER set_addresses_timestamp BEFORE
-UPDATE ON addresses FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- LISTINGS
--- =====================
-CREATE TABLE IF NOT EXISTS listings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    apartment_id UUID NOT NULL REFERENCES apartments(id) ON DELETE CASCADE,
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    price NUMERIC(12, 2) NOT NULL,
-    -- currency CHAR(3) NOT NULL DEFAULT 'UZS',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TRIGGER set_listings_timestamp BEFORE
-UPDATE ON listings FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- LISTING TAGS
--- =====================
-CREATE TABLE IF NOT EXISTS listing_tags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-    tag VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(listing_id, tag)
-);
-CREATE TRIGGER set_listing_tags_timestamp BEFORE
-UPDATE ON listing_tags FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- =====================
--- FAVORITES
--- =====================
-CREATE TABLE IF NOT EXISTS favorites (
+-- ======================
+-- BILLING ACCOUNTS
+-- ======================
+CREATE TABLE IF NOT EXISTS billing_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, listing_id)
+    plan plan_type NOT NULL DEFAULT 'free',
+    credits NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TRIGGER set_favorites_timestamp BEFORE
-UPDATE ON favorites FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+-- Give new users some free credits
+CREATE OR REPLACE FUNCTION give_free_credits() RETURNS TRIGGER AS $$ BEGIN
+INSERT INTO billing_accounts (user_id, credits, plan)
+VALUES (
+        NEW.id,
+        (10 + floor(random() * 90))::NUMERIC,
+        'free'
+    );
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER on_user_created
+AFTER
+INSERT ON users FOR EACH ROW EXECUTE PROCEDURE give_free_credits();
+-- ======================
+-- BILLING TRANSACTIONS
+-- ======================
+CREATE TABLE IF NOT EXISTS billing_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    deployment_id UUID REFERENCES deployments(id) ON DELETE
+    SET NULL,
+        cpu_millicores INTEGER NOT NULL,
+        memory_mb INTEGER NOT NULL,
+        cost_per_hour NUMERIC(10, 4) NOT NULL,
+        hours_used NUMERIC(10, 2) NOT NULL DEFAULT 1.0,
+        total_cost NUMERIC(12, 4) GENERATED ALWAYS AS (cost_per_hour * hours_used) STORED,
+        charged_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+-- ======================
+-- BILLING TRANSACTIONS
+-- ======================
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL REFERENCES billing_accounts(id) ON DELETE CASCADE,
+    amount NUMERIC(10, 2) NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+-- ======================
+-- COMPUTE PROJECTS
+-- ======================
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (owner_id, name)
+);
+-- ======================
+-- DEPLOYMENTS (per-project)
+-- ======================
+CREATE TABLE IF NOT EXISTS deployments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(64) NOT NULL,
+    image TEXT NOT NULL,
+    env_vars JSONB DEFAULT '{}'::jsonb,
+    replicas INTEGER NOT NULL DEFAULT 1,
+    cpu_limit_millicores INTEGER NOT NULL DEFAULT 500,
+    -- 0.5 CPU
+    memory_limit_mb INTEGER NOT NULL DEFAULT 512,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    -- pending | running | stopped | failed
+    cluster_namespace VARCHAR(64) NOT NULL DEFAULT 'default',
+    cluster_deployment_name VARCHAR(128) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_deployments_user_id ON deployments(user_id);
+CREATE INDEX IF NOT EXISTS idx_deployments_status ON deployments(status);
+CREATE TRIGGER set_deployments_timestamp BEFORE
+UPDATE ON deployments FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+-- ======================
+-- JOBS (batch tasks / cron / on-demand compute)
+-- ======================
+CREATE TABLE IF NOT EXISTS deployment_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    deployment_id UUID NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL,
+    -- created, scaled, stopped, deleted, error, etc.
+    message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_deployment_events_deployment_id ON deployment_events(deployment_id);
+-- ======================
+-- JOBS (batch tasks / cron / on-demand compute)
+-- ======================
+CREATE TABLE IF NOT EXISTS jobs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    image TEXT NOT NULL,
+    command TEXT,
+    status deployment_status NOT NULL DEFAULT 'pending',
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
