@@ -21,17 +21,6 @@ pub struct OAuthCallback {
     pub(crate) code: String,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct PhoneResponse {
-    pub phone_numbers: Option<Vec<PhoneNumber>>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct PhoneNumber {
-    pub value: String,
-}
-
 #[derive(Serialize, Debug)]
 pub struct AuthResponse {
     pub user: User,

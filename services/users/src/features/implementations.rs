@@ -43,26 +43,6 @@ impl ContinueWithEmailSchema {
     pub async fn verify(&self, database: &Database) -> Result<Option<User>, AppError> {
         self.validate()?;
 
-        // let maybe_oauth_user = sqlx::query_as!(
-        //     OAuthUser,
-        //     r#"
-        //         SELECT
-        //             id,
-        //             provider AS "provider: Provider",
-        //             username,
-        //             full_name,
-        //             email,
-        //             phone_number,
-        //             password,
-        //             picture,
-        //             created_at
-        //         FROM oauth_users WHERE id = $1
-        //     "#,
-        //     self.email
-        // )
-        // .fetch_optional(&database.pool)
-        // .await?;
-
         let maybe_user = sqlx::query_as!(
             User,
             r#"
@@ -100,46 +80,3 @@ impl ContinueWithEmailSchema {
         Ok(None)
     }
 }
-
-// impl SignUpSchema {
-//     pub async fn verify(self, database: &Database) -> Result<User, AppError> {
-//         self.validate()?;
-
-//         let maybe_user = sqlx::query_as!(
-//             User,
-//             r#"
-//                 SELECT
-//                     id,
-//                     first_name,
-//                     last_name,
-//                     email,
-//                     phone_number,
-//                     password,
-//                     picture,
-//                     role AS "role: UserRole",
-//                     status AS "status: UserStatus",
-//                     email_verified,
-//                     oauth_user_id,
-//                     created_at,
-//                     updated_at
-//                 FROM users WHERE email = $1
-//             "#,
-//             self.email
-//         )
-//         .fetch_optional(&database.pool)
-//         .await?;
-
-//         let user = maybe_user
-//             .ok_or_else(|| AppError::NotFoundError("User not found with this email".to_string()))?;
-
-//         let verified = verify(&self.password, &user.password)?;
-
-//         if !verified {
-//             return Err(AppError::NotFoundError(
-//                 "Password is not correct".to_string(),
-//             ));
-//         }
-
-//         Ok(user)
-//     }
-// }
