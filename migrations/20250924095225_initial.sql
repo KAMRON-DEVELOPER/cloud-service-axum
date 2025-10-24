@@ -84,12 +84,26 @@ CREATE TABLE IF NOT EXISTS user_wallets (
 );
 CREATE TRIGGER set_user_wallets_timestamp BEFORE
 UPDATE ON user_wallets FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
-CREATE OR REPLACE FUNCTION give_free_credit() RETURNS TRIGGER AS $$ BEGIN
+CREATE OR REPLACE FUNCTION give_free_credit() RETURNS TRIGGER AS $$
+DECLARE new_wallet_id UUID;
+initial_credit_amount NUMERIC(18, 6);
+BEGIN -- 1. Create the wallet with a ZERO balance
 INSERT INTO user_wallets (user_id, credit_balance)
+VALUES (NEW.id, 0.00)
+RETURNING id INTO new_wallet_id;
+-- 2. Calculate the random credit
+initial_credit_amount := ((floor(random() * 91) + 10)::numeric)::NUMERIC(18, 6);
+-- 3. Insert the "initial_credit" transaction into the ledger
+INSERT INTO wallet_transactions (wallet_id, amount, "type", details)
 VALUES (
-        NEW.id,
-        ((floor(random() * 91) + 10)::numeric)::NUMERIC(18, 6)
+        new_wallet_id,
+        initial_credit_amount,
+        'initial_credit',
+        'Initial sign-up bonus'
     );
+-- 4. The `apply_wallet_transaction` trigger will
+--    now automatically and safely update the wallet's
+--    balance from 0 to the initial_credit_amount.
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
