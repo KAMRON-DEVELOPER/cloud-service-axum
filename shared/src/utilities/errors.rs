@@ -155,7 +155,7 @@ pub enum AppError {
     ),
     #[error("{0}")]
     NotFoundError(String),
-    #[error("IO error: {0}")]
+    #[error("IO error, {0}")]
     IoError(#[from] std::io::Error),
     #[error("Invalid ca cert error")]
     InvalidCaCertError(String),
@@ -179,6 +179,10 @@ pub enum AppError {
     SerdejsonError(#[from] serde_json::Error),
     #[error("Kube error")]
     KubeError(#[from] kube::Error),
+    #[error("Kafka error, {0}")]
+    KafkaError(#[from] rdkafka::error::KafkaError),
+    #[error("Lapin error, {0}")]
+    LapinError(#[from] lapin::Error),
 }
 
 impl IntoResponse for AppError {
@@ -427,6 +431,8 @@ impl IntoResponse for AppError {
             Self::NotFoundError(e) => (StatusCode::NOT_FOUND, e),
             Self::InvalidImageFormatError(e) => (StatusCode::UNPROCESSABLE_ENTITY, e),
             Self::KubeError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::KafkaError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::LapinError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         };
 
         let body = Json(json!({"error": error_message}));

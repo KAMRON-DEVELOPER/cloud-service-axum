@@ -1,27 +1,7 @@
 use oauth2::{
     AuthUrl, ClientId, ClientSecret, RedirectUrl, RevocationUrl, TokenUrl, basic::BasicClient,
 };
-use serde::Deserialize;
-
-use crate::utilities::{config::Config, errors::AppError};
-
-#[derive(Deserialize)]
-pub struct OAuthResponse {
-    pub access_token: String,
-    pub id_token: String,
-}
-
-#[derive(Deserialize)]
-pub struct GoogleUserResult {
-    pub id: String,
-    pub email: String,
-    pub verified_email: bool,
-    pub name: String,
-    pub given_name: String,
-    pub family_name: String,
-    pub picture: String,
-    pub locale: String,
-}
+use shared::utilities::{config::Config, errors::AppError};
 
 pub type GoogleOAuthClient = oauth2::Client<
     oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,

@@ -1,8 +1,6 @@
-pub mod handlers;
-pub mod implementations;
-pub mod models;
-pub mod schemas;
+pub mod features;
 pub mod services;
+pub mod utilities;
 
 use std::net::SocketAddr;
 use std::result::Result::Ok;
@@ -13,6 +11,10 @@ use axum::{
     response::IntoResponse,
 };
 use axum_extra::extract::cookie::Key;
+use shared::{
+    services::{amqp::Amqp, database::Database, redis::Redis},
+    utilities::{config::Config, tls::build_rustls_config},
+};
 use time::macros::format_description;
 use tokio::signal;
 use tower_http::{
@@ -22,6 +24,14 @@ use tower_http::{
 use tracing::info;
 use tracing_subscriber::{
     EnvFilter, fmt::time::LocalTime, layer::SubscriberExt, util::SubscriberInitExt,
+};
+
+use crate::{
+    services::{
+        build_oauth::{build_github_oauth_client, build_google_oauth_client},
+        build_s3::{build_gcs, build_s3},
+    },
+    utilities::app_state::AppState,
 };
 
 #[tokio::main]
@@ -59,8 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rustls_config = build_rustls_config(&config)?;
     let database = Database::new(&config).await?;
     let redis = Redis::new(&config).await?;
-    let qdrant = build_qdrant(&config).await?;
-    let kubernetes = Kubernetes::new(&config).await?;
+    let amqp = Amqp::new(&config).await?;
     let key = Key::from(config.key.as_ref().unwrap().as_bytes());
     let google_oauth_client = build_google_oauth_client(&config)?;
     let github_oauth_client = build_github_oauth_client(&config)?;
@@ -72,10 +81,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_state = AppState {
         rustls_config,
-        kubernetes,
         database,
         redis,
-        qdrant,
+        amqp,
         config: config.clone(),
         key,
         google_oauth_client,
@@ -129,7 +137,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
     let app = axum::Router::new()
-        .merge(listings::routes())
         .merge(users::routes())
         .fallback(not_found_handler)
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))

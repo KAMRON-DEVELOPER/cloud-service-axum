@@ -1,8 +1,6 @@
-pub mod handlers;
-pub mod implementations;
-pub mod models;
-pub mod schemas;
+pub mod features;
 pub mod services;
+pub mod utilities;
 
 use std::net::SocketAddr;
 use std::result::Result::Ok;

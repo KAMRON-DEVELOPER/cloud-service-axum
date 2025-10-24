@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::models::{User, UserRole, UserStatus};
+use crate::features::models::{User, UserRole, UserStatus};
 
 #[derive(Deserialize, Debug)]
 pub struct VerifyQuery {

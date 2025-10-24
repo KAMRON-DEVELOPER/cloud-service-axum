@@ -6,7 +6,6 @@ use std::{
 
 use sqlx::postgres::PgSslMode;
 use tokio::fs;
-use tower::util::Optional;
 use tracing::{Level, warn};
 
 #[derive(Clone, Debug)]
@@ -26,6 +25,12 @@ pub struct Config {
     pub redis_port: Option<u16>,
     pub redis_username: Option<String>,
     pub redis_password: Option<String>,
+
+    // RABBITMQ
+    pub amqp_url: Option<String>,
+
+    // KAFKA BROKERS
+    pub kafka_brokers: Option<String>,
 
     // QDRANT
     pub qdrant_url: Option<String>,
@@ -149,6 +154,22 @@ impl Config {
             Some("REDIS_PASSWORD"),
             None,
             Some("password".to_string()),
+        )
+        .await;
+
+        let amqp_addr = get_config_value(
+            "AMQP_ADDR",
+            Some("AMQP_ADDR"),
+            None,
+            Some("amqp://127.0.0.1:5672".to_string()),
+        )
+        .await;
+
+        let kafka_brokers = get_config_value(
+            "KAFKA_BROKERS",
+            Some("KAFKA_BROKERS"),
+            None,
+            Some("127.0.0.1:19092,127.0.0.1:29092,127.0.0.1:39092".to_string()),
         )
         .await;
 
@@ -313,6 +334,8 @@ impl Config {
             redis_port,
             redis_username,
             redis_password,
+            amqp_url: amqp_addr,
+            kafka_brokers,
             qdrant_url,
             qdrant_api_key,
             firebase_adminsdk,

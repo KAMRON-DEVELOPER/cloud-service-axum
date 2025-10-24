@@ -1,16 +1,11 @@
-use crate::{
-    models::{User, UserRole, UserStatus},
-    utilities::errors::AppError,
-};
-use crate::{
-    services::database::Database,
-    users::{
-        models::{OAuthUser, Provider},
-        schemas::{ContinueWithEmailSchema, GithubOAuthUser, GoogleOAuthUser},
-    },
-};
 use bcrypt::verify;
+use shared::{services::database::Database, utilities::errors::AppError};
 use validator::Validate;
+
+use crate::features::{
+    models::{OAuthUser, Provider, User},
+    schemas::{ContinueWithEmailSchema, GithubOAuthUser, GoogleOAuthUser},
+};
 
 impl From<GoogleOAuthUser> for OAuthUser {
     fn from(g: GoogleOAuthUser) -> Self {

@@ -1,7 +1,7 @@
 use object_store::aws::{AmazonS3, AmazonS3Builder};
 use object_store::gcp::{GoogleCloudStorage, GoogleCloudStorageBuilder};
-
-use crate::utilities::{config::Config, errors::AppError};
+use shared::utilities::config::Config;
+use shared::utilities::errors::AppError;
 
 pub fn build_s3(config: &Config) -> Result<AmazonS3, AppError> {
     Ok(AmazonS3Builder::new()
