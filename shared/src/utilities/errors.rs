@@ -25,6 +25,8 @@ pub enum AppError {
     RedisError(#[from] redis::RedisError),
     #[error("Missing qdrant url error")]
     MissingQdrantUrlError,
+    #[error("Missing amqp url error")]
+    MissingAmqpUrlError,
     #[error("Missing qdrant api key error")]
     MissingQdrantApiKeyError,
     #[error("Qdrant error: {0}")]
@@ -247,6 +249,10 @@ impl IntoResponse for AppError {
             Self::MissingQdrantUrlError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Missing qdrant url error".to_string(),
+            ),
+            Self::MissingAmqpUrlError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Missing amqp url error".to_string(),
             ),
             Self::MissingQdrantApiKeyError => (
                 StatusCode::INTERNAL_SERVER_ERROR,

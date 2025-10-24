@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use lapin::{Channel, Connection, ConnectionProperties};
+use lapin::{
+    Channel, Connection, ConnectionProperties,
+    tcp::{OwnedIdentity, OwnedTLSConfig},
+};
 use tracing::info;
 
 use crate::utilities::{config::Config, errors::AppError};
@@ -12,12 +15,27 @@ pub struct Amqp {
 
 impl Amqp {
     pub async fn new(config: &Config) -> Result<Self, AppError> {
-        let connection = Connection::connect(
-            &config.amqp_url.clone().unwrap(),
-            ConnectionProperties::default(),
-        )
-        .await?;
+        let uri = config
+            .amqp_url
+            .clone()
+            .ok_or_else(|| AppError::MissingAmqpUrlError)?;
 
+        let options = ConnectionProperties::default();
+
+        let mut tlsconfig = OwnedTLSConfig::default();
+
+        if let (Some(ca), Some(client_cert), Some(client_key)) =
+            (&config.ca, &config.client_cert, &config.client_key)
+        {
+            info!("🔐 AMQP SSL/TLS enabled");
+            tlsconfig.cert_chain = Some(ca.to_string());
+            tlsconfig.identity = Some(OwnedIdentity::PKCS8 {
+                pem: client_cert.clone().into_bytes(),
+                key: client_key.clone().into_bytes(),
+            });
+        }
+
+        let connection = Connection::connect_with_config(&uri, options, tlsconfig).await?;
         info!("✅ RabbitMQ connection established.");
 
         Ok(Self {

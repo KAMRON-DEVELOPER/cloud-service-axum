@@ -12,7 +12,7 @@ use axum::{
 };
 use axum_extra::extract::cookie::Key;
 use shared::{
-    services::{amqp::Amqp, database::Database, redis::Redis},
+    services::{amqp::Amqp, database::Database, kafka::Kafka, redis::Redis},
     utilities::{config::Config, tls::build_rustls_config},
 };
 use time::macros::format_description;
@@ -70,6 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database = Database::new(&config).await?;
     let redis = Redis::new(&config).await?;
     let amqp = Amqp::new(&config).await?;
+    let kafka = Kafka::new(&config, "")?;
     let key = Key::from(config.key.as_ref().unwrap().as_bytes());
     let google_oauth_client = build_google_oauth_client(&config)?;
     let github_oauth_client = build_github_oauth_client(&config)?;
@@ -84,6 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         database,
         redis,
         amqp,
+        kafka,
         config: config.clone(),
         key,
         google_oauth_client,
@@ -137,7 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
     let app = axum::Router::new()
-        .merge(users::routes())
+        .merge(features::routes())
         .fallback(not_found_handler)
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .layer(cors)

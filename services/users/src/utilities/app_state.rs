@@ -1,14 +1,11 @@
-use std::sync::Arc;
-
 use crate::services::build_oauth::{GithubOAuthClient, GoogleOAuthClient};
 use axum::extract::FromRef;
 use axum_extra::extract::cookie::Key;
 use object_store::{aws::AmazonS3, gcp::GoogleCloudStorage};
-use rdkafka::{consumer::StreamConsumer, producer::FutureProducer};
 use reqwest::Client;
 use rustls::ClientConfig;
 use shared::{
-    services::{amqp::Amqp, database::Database, redis::Redis},
+    services::{amqp::Amqp, database::Database, kafka::Kafka, redis::Redis},
     utilities::config::Config,
 };
 
@@ -17,9 +14,8 @@ pub struct AppState {
     pub rustls_config: ClientConfig,
     pub database: Database,
     pub redis: Redis,
-    amqp: Amqp,
-    kafka_producer: FutureProducer,
-    kafka_consumer: Arc<StreamConsumer>,
+    pub amqp: Amqp,
+    pub kafka: Kafka,
     pub config: Config,
     pub key: Key,
     pub google_oauth_client: GoogleOAuthClient,
@@ -53,15 +49,9 @@ impl FromRef<AppState> for Amqp {
     }
 }
 
-impl FromRef<AppState> for FutureProducer {
+impl FromRef<AppState> for Kafka {
     fn from_ref(state: &AppState) -> Self {
-        state.kafka_producer.clone()
-    }
-}
-
-impl FromRef<AppState> for Arc<StreamConsumer> {
-    fn from_ref(state: &AppState) -> Self {
-        Arc::clone(&state.kafka_consumer)
+        state.kafka.clone()
     }
 }
 
