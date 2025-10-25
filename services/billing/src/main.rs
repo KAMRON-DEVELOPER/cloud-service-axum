@@ -10,7 +10,6 @@ use axum::{
     http::{self, HeaderName, HeaderValue, Method, StatusCode, header},
     response::IntoResponse,
 };
-use axum_extra::extract::cookie::Key;
 use shared::{
     services::{amqp::Amqp, database::Database, kafka::Kafka, redis::Redis},
     utilities::{config::Config, tls::build_rustls_config},
