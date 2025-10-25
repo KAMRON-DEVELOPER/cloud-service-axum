@@ -1,7 +1,8 @@
-use crate::features::kubernetes::models::DeploymentStatus;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::features::models::DeploymentStatus;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

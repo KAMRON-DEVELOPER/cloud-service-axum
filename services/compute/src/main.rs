@@ -5,24 +5,15 @@ pub mod utilities;
 use std::net::SocketAddr;
 use std::result::Result::Ok;
 
-use crate::{
-    features::{listings, users},
-    services::{
-        build_kubernetes::Kubernetes,
-        build_oauth::{build_github_oauth_client, build_google_oauth_client},
-        build_qdrant::build_qdrant,
-        build_s3::{build_gcs, build_s3},
-        database::Database,
-        redis::Redis,
-    },
-    utilities::{app_state::AppState, config::Config, tls::build_rustls_config},
-};
 use axum::{
     extract::{ConnectInfo, DefaultBodyLimit},
     http::{self, HeaderName, HeaderValue, Method, StatusCode, header},
     response::IntoResponse,
 };
-use axum_extra::extract::cookie::Key;
+use shared::{
+    services::{amqp::Amqp, database::Database, kafka::Kafka, redis::Redis},
+    utilities::{config::Config, tls::build_rustls_config},
+};
 use time::macros::format_description;
 use tokio::signal;
 use tower_http::{
@@ -33,6 +24,8 @@ use tracing::info;
 use tracing_subscriber::{
     EnvFilter, fmt::time::LocalTime, layer::SubscriberExt, util::SubscriberInitExt,
 };
+
+use crate::{services::build_kubernetes::Kubernetes, utilities::app_state::AppState};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -69,30 +62,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rustls_config = build_rustls_config(&config)?;
     let database = Database::new(&config).await?;
     let redis = Redis::new(&config).await?;
-    let qdrant = build_qdrant(&config).await?;
     let kubernetes = Kubernetes::new(&config).await?;
-    let key = Key::from(config.key.as_ref().unwrap().as_bytes());
-    let google_oauth_client = build_google_oauth_client(&config)?;
-    let github_oauth_client = build_github_oauth_client(&config)?;
+    let amqp = Amqp::new(&config).await?;
+    let kafka = Kafka::new(&config, "")?;
     let http_client = reqwest::ClientBuilder::new()
         .redirect(reqwest::redirect::Policy::none())
         .build()?;
-    let s3 = build_s3(&config)?;
-    let gcs = build_gcs(&config)?;
 
     let app_state = AppState {
         rustls_config,
-        kubernetes,
         database,
         redis,
-        qdrant,
+        kubernetes,
+        amqp,
+        kafka,
         config: config.clone(),
-        key,
-        google_oauth_client,
-        github_oauth_client,
         http_client,
-        s3,
-        gcs,
     };
 
     let cors = CorsLayer::new()
@@ -139,8 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
     let app = axum::Router::new()
-        .merge(listings::routes())
-        .merge(users::routes())
+        .merge(features::routes())
         .fallback(not_found_handler)
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .layer(cors)
