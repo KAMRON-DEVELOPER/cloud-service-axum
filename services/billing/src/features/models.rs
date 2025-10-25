@@ -4,21 +4,28 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Type};
 use uuid::Uuid;
 
+// ============================================
+// ENUMS
+// ============================================
+
 #[derive(Type, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[sqlx(type_name = "transaction_type", rename_all = "snake_case")]
 pub enum TransactionType {
-    InitialCredit,
+    FreeCredit,
     UsageCharge,
-    TopUp,
-    Refund,
+    Fund,
 }
+
+// ============================================
+// MODELS
+// ============================================
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct UserWallet {
+pub struct Balance {
     pub id: Uuid,
     pub user_id: Uuid,
-    pub credit_balance: BigDecimal,
+    pub amount: BigDecimal,
     pub currency: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -26,20 +33,20 @@ pub struct UserWallet {
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct WalletTransaction {
+pub struct Transaction {
     pub id: Uuid,
-    pub wallet_id: Uuid,
+    pub balance_id: Uuid,
     pub amount: BigDecimal,
     #[sqlx(rename = "type")]
     pub transaction_type: TransactionType,
-    pub details: Option<String>,
-    pub billing_record_id: Option<Uuid>,
+    pub detail: Option<String>,
+    pub billing_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct BillingRecord {
+pub struct Billing {
     pub id: Uuid,
     pub user_id: Uuid,
     pub deployment_id: Option<Uuid>,
@@ -48,6 +55,17 @@ pub struct BillingRecord {
     pub memory_mb: i32,
     pub cost_per_hour: BigDecimal,
     pub hours_used: BigDecimal,
+    #[sqlx(default)]
     pub total_cost: BigDecimal,
-    pub charged_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemConfig {
+    pub id: bool,
+    pub free_credit_enabled: bool,
+    pub free_credit_amount: BigDecimal,
+    pub free_credit_detail: Option<String>,
+    pub updated_at: DateTime<Utc>,
 }

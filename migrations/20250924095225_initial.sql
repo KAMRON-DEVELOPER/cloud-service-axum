@@ -45,6 +45,25 @@ WHEN duplicate_object THEN NULL;
 END $$;
 --
 --
+-- =====================
+-- OAUTH USERS
+-- =====================
+CREATE TABLE IF NOT EXISTS oauth_users (
+    id VARCHAR(255) PRIMARY KEY,
+    provider provider NOT NULL,
+    username VARCHAR(50),
+    full_name VARCHAR(50),
+    email VARCHAR(100),
+    password TEXT,
+    picture TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_oauth_email UNIQUE(email)
+);
+CREATE TRIGGER set_oauth_users_timestamp BEFORE
+UPDATE ON oauth_users FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+--
+--
 -- ==============================================
 -- USERS
 -- ==============================================
@@ -58,13 +77,14 @@ CREATE TABLE IF NOT EXISTS users (
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     role user_role NOT NULL DEFAULT 'regular',
     status user_status NOT NULL DEFAULT 'pending_verification',
-    oauth_user_id TEXT,
-    last_login_at TIMESTAMPTZ,
-    last_login_ip VARCHAR(45),
-    deleted_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (username)
+    oauth_user_id VARCHAR(255) REFERENCES oauth_users(id) ON DELETE
+    SET NULL,
+        last_login_at TIMESTAMPTZ,
+        last_login_ip VARCHAR(45),
+        deleted_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (username)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_lower_email ON users (lower(email));
 CREATE TRIGGER set_users_timestamp BEFORE
