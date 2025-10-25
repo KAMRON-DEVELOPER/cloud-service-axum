@@ -87,6 +87,79 @@ UPDATE ON balances FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 --
 --
 -- ==============================================
+-- PROJECTS
+-- ==============================================
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (owner_id, name)
+);
+CREATE TRIGGER set_projects_timestamp BEFORE
+UPDATE ON projects FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+--
+--
+-- ==============================================
+-- DEPLOYMENTS
+-- ==============================================
+CREATE TABLE IF NOT EXISTS deployments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(128) NOT NULL,
+    image TEXT NOT NULL,
+    env_vars JSONB NOT NULL DEFAULT '{}'::jsonb,
+    replicas INTEGER NOT NULL DEFAULT 1 CHECK (replicas >= 1),
+    resources JSONB NOT NULL DEFAULT jsonb_build_object(
+        'cpu_request_millicores',
+        250,
+        'cpu_limit_millicores',
+        500,
+        'memory_request_mb',
+        256,
+        'memory_limit_mb',
+        512
+    ),
+    labels JSONB,
+    status deployment_status NOT NULL DEFAULT 'pending',
+    cluster_namespace VARCHAR(128) NOT NULL DEFAULT 'default',
+    cluster_deployment_name VARCHAR(192) NOT NULL,
+    node_selector JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (project_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_deployments_user_id ON deployments(user_id);
+CREATE INDEX IF NOT EXISTS idx_deployments_project_id ON deployments(project_id);
+CREATE INDEX IF NOT EXISTS idx_deployments_status ON deployments(status);
+CREATE TRIGGER set_deployments_timestamp BEFORE
+UPDATE ON deployments FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+--
+--
+-- ==============================================
+-- BILLINGS
+-- ==============================================
+CREATE TABLE IF NOT EXISTS billings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    deployment_id UUID REFERENCES deployments(id) ON DELETE
+    SET NULL,
+        resources_snapshot JSONB NOT NULL,
+        cpu_millicores INTEGER NOT NULL CHECK (cpu_millicores >= 0),
+        memory_mb INTEGER NOT NULL CHECK (memory_mb >= 0),
+        cost_per_hour NUMERIC(18, 8) NOT NULL,
+        hours_used NUMERIC(12, 6) NOT NULL DEFAULT 1.0,
+        total_cost NUMERIC(20, 8) GENERATED ALWAYS AS (cost_per_hour * hours_used) STORED,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_billings_user_id ON billings(user_id);
+CREATE INDEX IF NOT EXISTS idx_billings_deployment_id ON billings(deployment_id);
+--
+--
+-- ==============================================
 -- TRANSACTIONS
 -- ==============================================
 CREATE TABLE IF NOT EXISTS transactions (
@@ -95,7 +168,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount NUMERIC(18, 6) NOT NULL,
     type transaction_type NOT NULL,
     detail TEXT,
-    billing_id UUID REFERENCES billing_records(id) ON DELETE
+    billing_id UUID REFERENCES billings(id) ON DELETE
     SET NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -179,59 +252,6 @@ INSERT ON users FOR EACH ROW EXECUTE PROCEDURE on_user_created_balance();
 --
 --
 -- ==============================================
--- PROJECTS
--- ==============================================
-CREATE TABLE IF NOT EXISTS projects (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(150) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (owner_id, name)
-);
-CREATE TRIGGER set_projects_timestamp BEFORE
-UPDATE ON projects FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
---
---
--- ==============================================
--- DEPLOYMENTS
--- ==============================================
-CREATE TABLE IF NOT EXISTS deployments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    name VARCHAR(128) NOT NULL,
-    image TEXT NOT NULL,
-    env_vars JSONB NOT NULL DEFAULT '{}'::jsonb,
-    replicas INTEGER NOT NULL DEFAULT 1 CHECK (replicas >= 1),
-    resources JSONB NOT NULL DEFAULT jsonb_build_object(
-        'cpu_request_millicores',
-        250,
-        'cpu_limit_millicores',
-        500,
-        'memory_request_mb',
-        256,
-        'memory_limit_mb',
-        512
-    ),
-    labels JSONB,
-    status deployment_status NOT NULL DEFAULT 'pending',
-    cluster_namespace VARCHAR(128) NOT NULL DEFAULT 'default',
-    cluster_deployment_name VARCHAR(192) NOT NULL,
-    node_selector JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (project_id, name)
-);
-CREATE INDEX IF NOT EXISTS idx_deployments_user_id ON deployments(user_id);
-CREATE INDEX IF NOT EXISTS idx_deployments_project_id ON deployments(project_id);
-CREATE INDEX IF NOT EXISTS idx_deployments_status ON deployments(status);
-CREATE TRIGGER set_deployments_timestamp BEFORE
-UPDATE ON deployments FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
---
---
--- ==============================================
 -- DEPLOYMENT SECRETS (application-managed encryption)
 -- ==============================================
 CREATE TABLE IF NOT EXISTS deployment_secrets (
@@ -255,23 +275,3 @@ CREATE TABLE IF NOT EXISTS deployment_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_deployment_events_deployment_id ON deployment_events(deployment_id);
---
---
--- ==============================================
--- BILLINGS
--- ==============================================
-CREATE TABLE IF NOT EXISTS billings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    deployment_id UUID REFERENCES deployments(id) ON DELETE
-    SET NULL,
-        resources_snapshot JSONB NOT NULL,
-        cpu_millicores INTEGER NOT NULL CHECK (cpu_millicores >= 0),
-        memory_mb INTEGER NOT NULL CHECK (memory_mb >= 0),
-        cost_per_hour NUMERIC(18, 8) NOT NULL,
-        hours_used NUMERIC(12, 6) NOT NULL DEFAULT 1.0,
-        total_cost NUMERIC(20, 8) GENERATED ALWAYS AS (cost_per_hour * hours_used) STORED,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_billing_records_user_id ON billing_records(user_id);
-CREATE INDEX IF NOT EXISTS idx_billing_records_deployment_id ON billing_records(deployment_id);
