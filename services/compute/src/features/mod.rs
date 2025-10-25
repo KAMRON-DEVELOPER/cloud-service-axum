@@ -3,6 +3,7 @@ pub mod implementations;
 pub mod models;
 pub mod repository;
 pub mod schemas;
+pub mod websocket;
 
 use crate::utilities::app_state::AppState;
 

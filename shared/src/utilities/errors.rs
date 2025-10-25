@@ -1,3 +1,5 @@
+use std::{alloc, string::FromUtf8Error};
+
 use axum::{Json, http::StatusCode, response::IntoResponse, response::Response};
 use serde_json::json;
 
@@ -185,6 +187,14 @@ pub enum AppError {
     KafkaError(#[from] rdkafka::error::KafkaError),
     #[error("Lapin error, {0}")]
     LapinError(#[from] lapin::Error),
+    #[error("Invalid key error, {0}")]
+    InvalidKey(String),
+    #[error("Encryption failed error, {0}")]
+    EncryptionFailed(String),
+    #[error("Decryption failed error, {0}")]
+    DecryptionFailed(#[from] FromUtf8Error),
+    #[error("Invalid format error")]
+    InvalidFormat,
 }
 
 impl IntoResponse for AppError {
@@ -439,6 +449,13 @@ impl IntoResponse for AppError {
             Self::KubeError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::KafkaError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::LapinError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::InvalidKey(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::EncryptionFailed(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::DecryptionFailed(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::InvalidFormat => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Invalid format error".to_string(),
+            ),
         };
 
         let body = Json(json!({"error": error_message}));
