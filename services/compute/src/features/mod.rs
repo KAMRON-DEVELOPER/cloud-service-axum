@@ -13,8 +13,15 @@ use axum::{
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/v1/profile", get(handlers::get_balance))
-        .route("/api/v1/profile", patch(handlers::update_balance))
-        .route("/api/v1/profile", delete(handlers::delete_balance))
-        .route("/api/v1/auth/refresh", post(handlers::cerate_balance))
+        .route("/api/v1/projects", get(handlers::get_projects))
+        .route("/api/v1/project:project_id", get(handlers::get_project))
+        .route("/api/v1/project:project_id", post(handlers::create_project))
+        .route(
+            "/api/v1/project:project_id",
+            patch(handlers::update_project),
+        )
+        .route(
+            "/api/v1/project:project_id",
+            delete(handlers::delete_project),
+        )
 }
