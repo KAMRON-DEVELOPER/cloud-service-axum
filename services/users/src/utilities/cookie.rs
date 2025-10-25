@@ -5,9 +5,10 @@ use axum::{
 use axum_extra::extract::{PrivateCookieJar, cookie::CookieJar};
 use cookie::Key;
 use serde::{Deserialize, Serialize};
+use shared::utilities::errors::AppError;
 use uuid::Uuid;
 
-use crate::utilities::errors::AppError;
+use crate::features::models::Provider;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct OptionalGoogleOAuthUserSub(pub Option<String>);

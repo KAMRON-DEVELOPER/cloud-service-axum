@@ -12,8 +12,7 @@ impl From<GoogleOAuthUser> for OAuthUser {
         Self {
             id: g.sub,
             provider: Provider::Google,
-            username: None,
-            full_name: g.name,
+            username: g.name,
             email: g.email,
             password: None,
             picture: g.picture,
@@ -28,8 +27,7 @@ impl From<GithubOAuthUser> for OAuthUser {
         Self {
             id: g.id.to_string(),
             provider: Provider::Github,
-            username: Some(g.login.clone()),
-            full_name: None,
+            username: Some(g.login),
             email: g.email,
             password: None,
             picture: Some(g.avatar_url),
@@ -47,8 +45,8 @@ impl ContinueWithEmailSchema {
             User,
             r#"
                 SELECT
-                    id,
-                    full_name,
+                    id, 
+                    username,
                     email,
                     password,
                     picture,
@@ -60,7 +58,7 @@ impl ContinueWithEmailSchema {
                     updated_at
                 FROM users WHERE email = $1
             "#,
-            self.email
+            self.email,
         )
         .fetch_optional(&database.pool)
         .await?;
@@ -73,6 +71,7 @@ impl ContinueWithEmailSchema {
                     "Password is incorrect".to_string(),
                 ));
             }
+
             return Ok(Some(user));
         }
 

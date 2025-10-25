@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS oauth_users (
     id VARCHAR(255) PRIMARY KEY,
     provider provider NOT NULL,
     username VARCHAR(50),
-    full_name VARCHAR(50),
     email VARCHAR(100),
     password TEXT,
     picture TEXT,
@@ -69,19 +68,15 @@ UPDATE ON oauth_users FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 -- ==============================================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    full_name VARCHAR(200) NOT NULL,
     username VARCHAR(64) NOT NULL,
     email VARCHAR(255) NOT NULL,
-    password TEXT,
+    password TEXT NOT NULL,
     picture TEXT,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     role user_role NOT NULL DEFAULT 'regular',
     status user_status NOT NULL DEFAULT 'pending_verification',
     oauth_user_id VARCHAR(255) REFERENCES oauth_users(id) ON DELETE
     SET NULL,
-        last_login_at TIMESTAMPTZ,
-        last_login_ip VARCHAR(45),
-        deleted_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (username)
@@ -89,6 +84,24 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_lower_email ON users (lower(email));
 CREATE TRIGGER set_users_timestamp BEFORE
 UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+--
+--
+-- ==============================================
+-- SESSIONS
+-- ==============================================
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_agent TEXT,
+    ip_address VARCHAR(45),
+    device_name VARCHAR(100),
+    refresh_token TEXT UNIQUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_activity_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_active ON sessions(is_active);
 --
 --
 -- ==============================================

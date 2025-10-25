@@ -40,8 +40,8 @@ pub struct ContinueWithEmailSchema {
     pub email: String,
     #[validate(length(
         min = 8,
-        max = 32,
-        message = "Password should be long between 8 and 32"
+        max = 24,
+        message = "Password should be long between 8 and 24"
     ))]
     pub password: String,
 }
@@ -56,7 +56,6 @@ pub struct GoogleOAuthUser {
     pub given_name: Option<String>,
     pub name: Option<String>,
     pub picture: Option<String>,
-    pub phone_number: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -75,9 +74,7 @@ pub struct GithubOAuthUser {
 #[serde(default, rename_all = "camelCase")]
 pub struct OAuthUserSchema {
     pub username: Option<String>,
-    pub full_name: Option<String>,
     pub email: Option<String>,
-    pub phone_number: Option<String>,
     pub password: Option<String>,
     pub picture: Option<String>,
 }
@@ -86,9 +83,8 @@ pub struct OAuthUserSchema {
 #[serde(rename_all = "camelCase")]
 pub struct UserOut {
     pub id: Uuid,
-    pub full_name: String,
+    pub username: String,
     pub email: String,
-    pub phone_number: String,
     pub picture: Option<String>,
     pub role: UserRole,
     pub status: UserStatus,
