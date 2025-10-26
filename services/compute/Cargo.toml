@@ -28,7 +28,6 @@ axum-extra = { version = "0.10.1", features = [
 bcrypt = "0.17.1"
 chrono = { version = "0.4.42", features = ["serde"] }
 dotenvy = "0.15.7"
-jsonwebtoken = "9.3.1"
 lapin = "3.6.0"
 oauth2 = "5.0.0"
 rand = "0.9.2"

@@ -1,4 +1,4 @@
-use std::{alloc, string::FromUtf8Error};
+use std::string::FromUtf8Error;
 
 use axum::{Json, http::StatusCode, response::IntoResponse, response::Response};
 use serde_json::json;
@@ -31,8 +31,6 @@ pub enum AppError {
     MissingAmqpUrlError,
     #[error("Missing qdrant api key error")]
     MissingQdrantApiKeyError,
-    #[error("Qdrant error: {0}")]
-    QdrantError(#[from] qdrant_client::QdrantError),
     #[error("Vector search error: {0}")]
     VectorSearchError(String),
     #[error("ImageEmbedding creation error")]
@@ -55,12 +53,6 @@ pub enum AppError {
     UrlParseError(#[from] url::ParseError),
     #[error("Invalid uri error: {0}")]
     InvalidUriError(#[from] axum::http::uri::InvalidUri),
-    #[error("Openidconnect discovery error: {0}")]
-    OpenIdConnectDiscoveryError(
-        #[from] openidconnect::DiscoveryError<oauth2::HttpClientError<reqwest::Error>>,
-    ),
-    #[error("Openidconnect configuration error: {0}")]
-    OpenIdConnectConfigurationError(#[from] openidconnect::ConfigurationError),
     #[error("Attempted to get a non-none value but found none")]
     OptionError,
     #[error("Attempted to parse a number to an integer but errored out: {0}")]
@@ -131,18 +123,6 @@ pub enum AppError {
     NonceNotFoundError,
     #[error("Id token not found error")]
     IdTokenNotFoundError,
-    #[error("Openidconnect claims verification error, {0}")]
-    OpenIdConnectClaimsVerificationError(#[from] openidconnect::ClaimsVerificationError),
-    #[error("Openidconnect signing error, {0}")]
-    OpenIdConnectSigningError(#[from] openidconnect::SigningError),
-    #[error("Openidconnect signature verification error, {0}")]
-    OpenIdConnectSignatureVerificationError(#[from] openidconnect::SignatureVerificationError),
-    #[error("Openidconnect http client error, {0}")]
-    OpenIdConnectHttpClientError(#[from] openidconnect::HttpClientError<reqwest::Error>),
-    #[error("Openidconnect user info error, {0}")]
-    OpenIdConnectUserInfoError(
-        #[from] openidconnect::UserInfoError<openidconnect::HttpClientError<reqwest::Error>>,
-    ),
     #[error("Validation error, {0}")]
     ValidationError(String),
     #[error("Validation error, {0}")]
@@ -268,7 +248,6 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Missing qdrant api key error".to_string(),
             ),
-            Self::QdrantError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::VectorSearchError(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Vector search error, {}", e),
@@ -298,34 +277,6 @@ impl IntoResponse for AppError {
                 format!("Url parse error, {}", e),
             ),
             Self::InvalidUriError(e) => (StatusCode::UNPROCESSABLE_ENTITY, e.to_string()),
-            Self::OpenIdConnectDiscoveryError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect discovery error, {}", e),
-            ),
-            Self::OpenIdConnectClaimsVerificationError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect claims verification error, {}", e),
-            ),
-            Self::OpenIdConnectSigningError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect signing error, {}", e),
-            ),
-            Self::OpenIdConnectConfigurationError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect configuration error, {}", e),
-            ),
-            Self::OpenIdConnectSignatureVerificationError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect signature verification error, {}", e),
-            ),
-            Self::OpenIdConnectHttpClientError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect http client error, {}", e),
-            ),
-            Self::OpenIdConnectUserInfoError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Openidconnect client info error, {}", e),
-            ),
             Self::OptionError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Attempted to get a non-none value but found none".to_string(),
