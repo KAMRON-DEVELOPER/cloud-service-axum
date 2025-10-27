@@ -1,22 +1,79 @@
+# 1. Create the dedicated namespace
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Namespace
 metadata:
-  name: rabbitmq-pvc
-  namespace: cloud-ns
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
+  name: infra-rabbitmq
 ---
-apiVersion: apps/v1
-kind: Deployment
+# 2. Create a Secret for credentials
+apiVersion: v1
+kind: Secret
 metadata:
-  name: rabbitmq-deployment
-  namespace: cloud-ns
+  name: rabbitmq-secret
+  namespace: infra-rabbitmq
+type: Opaque
+stringData:
+  RABBITMQ_DEFAULT_USER: cloudservice
+  RABBITMQ_DEFAULT_PASS: changeme-rabbitmq-password # Change this!
+---
+# 3. Create ConfigMap from your 'rabbitmq.local.conf'
+#    Run this command:
+#
+#    kubectl create configmap rabbitmq-config -n infra-rabbitmq \
+#      --from-file=rabbitmq.conf=deploy/configurations/rabbitmq/rabbitmq.local.conf
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: infra-rabbitmq
+data:
+  rabbitmq.conf: |
+    # ... content of your rabbitmq.local.conf ...
+    loopback_users.guest = false
+---
+# 4. The "Headless" Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-headless
+  namespace: infra-rabbitmq
+spec:
+  clusterIP: None
+  selector:
+    app: rabbitmq
+  ports:
+    - port: 5672
+      name: amqp
+    - port: 15672
+      name: http-mgmt
+---
+# 5. The "ClusterIP" Service for your apps
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+  namespace: infra-rabbitmq
+spec:
+  type: ClusterIP
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: http
+      port: 15672
+      targetPort: 15672
+---
+# 6. The StatefulSet (replaces your Deployment)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: infra-rabbitmq
 spec:
   replicas: 1
+  serviceName: "rabbitmq-headless"
   selector:
     matchLabels:
       app: rabbitmq
@@ -29,41 +86,31 @@ spec:
         - name: rabbitmq
           image: rabbitmq:management-alpine
           ports:
-            - containerPort: 5672
-            - containerPort: 15672
-          env:
-            - name: RABBITMQ_DEFAULT_USER
-              value: cloudservice
-            - name: RABBITMQ_DEFAULT_PASS
-              value: changeme-rabbitmq-password
+            - containerPort: 5672 # amqp
+            - containerPort: 15672 # http management
+          envFrom:
+            - secretRef:
+                name: rabbitmq-secret
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq
-          resources:
-            requests:
-              cpu: 250m
-              memory: "256M"
-            limits:
-              cpu: 500m
-              memory: "512M"
+            - name: rabbitmq-conf
+              mountPath: /etc/rabbitmq/
+          # (Add resource requests/limits as you had before)
       volumes:
-        - name: rabbitmq-data
-          persistentVolumeClaim:
-            claimName: rabbitmq-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rabbitmq-service
-  namespace: cloud-ns
-spec:
-  selector:
-    app: rabbitmq
-  ports:
-    - name: amqp
-      port: 5672
-      targetPort: 5672
-    - name: http
-      port: 15672
-      targetPort: 15672
-  type: ClusterIP
+        - name: rabbitmq-conf
+          configMap:
+            name: rabbitmq-config
+            items:
+              - key: rabbitmq.conf
+                path: rabbitmq.conf
+
+  # 7. Template for the persistent volume
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

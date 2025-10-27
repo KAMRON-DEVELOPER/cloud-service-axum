@@ -1,33 +1,86 @@
+# 1. Create the dedicated namespace
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Namespace
 metadata:
-  name: postgres-pvc
-  namespace: cloud-ns
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+  name: infra-postgres
 ---
+# 2. Your secret, just moved to the new namespace
 apiVersion: v1
 kind: Secret
 metadata:
   name: postgres-secret
-  namespace: cloud-ns
+  namespace: infra-postgres
 type: Opaque
 stringData:
   POSTGRES_USER: user
   POSTGRES_PASSWORD: password
   POSTGRES_DB: cloud_service_db
 ---
-apiVersion: apps/v1
-kind: Deployment
+# 3. Load your config files into a ConfigMap
+#    This assumes your .conf/.sh files are in 'deploy/configurations/postgresql'
+#    You must create this from your files:
+#
+#    kubectl create configmap postgres-config -n infra-postgres \
+#      --from-file=deploy/configurations/postgresql/postgresql.conf \
+#      --from-file=deploy/configurations/postgresql/pg_hba.conf \
+#      --from-file=deploy/configurations/postgresql/postgres-entrypoint.sh
+#
+#    (This is an example YAML of what that command creates)
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: postgres-deployment
-  namespace: cloud-ns
+  name: postgres-config
+  namespace: infra-postgres
+data:
+  # Data from your files would be here
+  postgresql.conf: |
+    # ... content of your postgresql.conf ...
+    listen_addresses = '*'
+  pg_hba.conf: |
+    # ... content of your pg_hba.conf ...
+    host    all             all             0.0.0.0/0               md5
+  postgres-entrypoint.sh: |
+    #!/bin/bash
+    # ... content of your script ...
+    exec postgres
+---
+# 4. The "Headless" Service for the StatefulSet's internal DNS
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: infra-postgres
+spec:
+  clusterIP: None # This makes it "headless"
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      name: tcp
+---
+# 5. The "ClusterIP" Service for your other apps to connect to
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: infra-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres # Selects the pods created by the StatefulSet
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+# 6. The StatefulSet (replaces your Deployment)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: infra-postgres
 spec:
   replicas: 1
+  serviceName: "postgres-headless" # Must match the headless service
   selector:
     matchLabels:
       app: postgres
@@ -44,30 +97,40 @@ spec:
           envFrom:
             - secretRef:
                 name: postgres-secret
+          # Mount the config files
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-          resources:
-            requests:
-              cpu: 250m
-              memory: "256M"
-            limits:
-              cpu: 500m
-              memory: "512M"
+            - name: postgres-config-files
+              mountPath: /docker-entrypoint-initdb.d/ # Scripts here run on init
+            - name: postgres-conf
+              mountPath: /etc/postgresql/ # Mount main .conf
+          # (Add resource requests/limits as you had before)
       volumes:
-        - name: postgres-data
-          persistentVolumeClaim:
-            claimName: postgres-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-service
-  namespace: cloud-ns
-spec:
-  selector:
-    app: postgres
-  ports:
-    - port: 5432
-      targetPort: 5432
-  type: ClusterIP
+        # Mount the ConfigMap as two separate volumes
+        - name: postgres-config-files
+          configMap:
+            name: postgres-config
+            items:
+              - key: postgres-entrypoint.sh
+                path: init.sh
+            defaultMode: 0755 # Make the script executable
+        - name: postgres-conf
+          configMap:
+            name: postgres-config
+            items:
+              - key: postgresql.conf
+                path: postgresql.conf
+              - key: pg_hba.conf
+                path: pg_hba.conf
+
+  # 7. This template creates a new PVC for each pod
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data # Name of the volumeMount
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+        # storageClassName: standard # (Optional)

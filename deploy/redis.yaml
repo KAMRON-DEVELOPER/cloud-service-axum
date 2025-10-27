@@ -1,10 +1,64 @@
-apiVersion: apps/v1
-kind: Deployment
+# 1. Create the dedicated namespace
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: redis-deployment
-  namespace: cloud-ns
+  name: infra-redis
+---
+# 2. Create ConfigMap from your 'redis-stack.local.conf'
+#    Run this command:
+#
+#    kubectl create configmap redis-config -n infra-redis \
+#      --from-file=redis.conf=deploy/configurations/redis-stack/redis-stack.local.conf
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: infra-redis
+data:
+  redis.conf: |
+    # ... content of your redis-stack.local.conf ...
+    # Make sure persistence is enabled!
+    save 60 1
+    appendonly yes
+---
+# 3. The "Headless" Service for the StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: infra-redis
+spec:
+  clusterIP: None
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      name: tcp-redis
+---
+# 4. The "ClusterIP" Service for your apps
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: infra-redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+# 5. The StatefulSet (replaces your Deployment)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: infra-redis
 spec:
   replicas: 1
+  serviceName: "redis-headless"
   selector:
     matchLabels:
       app: redis
@@ -16,26 +70,32 @@ spec:
       containers:
         - name: redis
           image: redis/redis-stack-server:latest
-          # args: ["redis-server", "/redis-stack.conf"]
+          # Tell redis to use our mounted config file
+          args: ["/conf/redis.conf"]
           ports:
             - containerPort: 6379
-          resources:
-            requests:
-              cpu: 250m
-              memory: "256M"
-            limits:
-              cpu: 500m
-              memory: "512M"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-service
-  namespace: cloud-ns
-spec:
-  selector:
-    app: redis
-  ports:
-    - port: 6379
-      targetPort: 6379
-  type: ClusterIP
+          volumeMounts:
+            # Mount for persistence
+            - name: redis-data
+              mountPath: /data
+            # Mount for config
+            - name: redis-conf
+              mountPath: /conf
+          # (Add resource requests/limits as you had before)
+      volumes:
+        - name: redis-conf
+          configMap:
+            name: redis-config
+            items:
+              - key: redis.conf
+                path: redis.conf
+
+  # 6. This template creates the PVC for pod 'redis-0'
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi # Give it some storage
