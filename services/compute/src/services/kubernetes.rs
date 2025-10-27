@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use k8s_openapi::ByteString;
 use k8s_openapi::api::apps::v1::{Deployment as K8sDeployment, DeploymentSpec};
 use k8s_openapi::api::core::v1::{
     Container, ContainerPort, EnvVar, EnvVarSource, PodSpec, PodTemplateSpec, ResourceRequirements,
@@ -57,7 +58,7 @@ impl DeploymentService {
         let external_url = format!("{}.{}", subdomain, base_domain);
 
         // Prepare env vars JSON
-        let env_vars_json = serde_json::to_value(req.env_vars.unwrap_or_default())?;
+        let env_vars_json = serde_json::to_value(req.env_vars.clone().unwrap_or_default())?;
 
         // Prepare resources JSON
         let resources_json = serde_json::to_value(req.resources.unwrap_or_default())?;
@@ -85,7 +86,7 @@ impl DeploymentService {
         .await?;
 
         // Store encrypted secrets
-        if let Some(secrets) = req.secrets {
+        if let Some(secrets) = &req.secrets {
             for (key, value) in secrets {
                 let encrypted_value = encryption_service.encrypt(&value)?;
                 DeploymentSecretRepository::create(&mut tx, deployment.id, &key, encrypted_value)
@@ -158,8 +159,8 @@ impl DeploymentService {
             let secret_name = format!("{}-secrets", name);
             let mut secret_data = BTreeMap::new();
 
-            for (key, value) in secrets {
-                secret_data.insert(key, value.into_bytes());
+            for (key, value) in &secrets {
+                secret_data.insert(key.clone(), ByteString(value.clone().into_bytes()));
             }
 
             let secret = K8sSecret {
@@ -342,7 +343,7 @@ impl DeploymentService {
                     http: Some(HTTPIngressRuleValue {
                         paths: vec![HTTPIngressPath {
                             path: Some("/".to_string()),
-                            path_type: Some("Prefix".to_string()),
+                            path_type: "Prefix".to_string(),
                             backend: IngressBackend {
                                 service: Some(IngressServiceBackend {
                                     name: name.clone(),
@@ -369,12 +370,7 @@ impl DeploymentService {
         ingress_api
             .create(&PostParams::default(), &ingress)
             .await
-            .map_err(|e| {
-                AppError::InternalServeInternalErrorrError(format!(
-                    "Failed to create ingress: {}",
-                    e
-                ))
-            })?;
+            .map_err(|e| AppError::InternalError(format!("Failed to create ingress: {}", e)))?;
 
         Ok(())
     }
