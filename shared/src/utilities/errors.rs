@@ -1,5 +1,3 @@
-use std::string::FromUtf8Error;
-
 use axum::{Json, http::StatusCode, response::IntoResponse, response::Response};
 use serde_json::json;
 
@@ -169,10 +167,12 @@ pub enum AppError {
     LapinError(#[from] lapin::Error),
     #[error("Invalid key error, {0}")]
     InvalidKey(String),
-    #[error("Encryption failed error, {0}")]
-    EncryptionFailed(String),
-    #[error("Decryption failed error, {0}")]
-    DecryptionFailed(#[from] FromUtf8Error),
+    #[error("Encryption error, {0}")]
+    EncryptionError(String),
+    #[error("Decryption error, {0}")]
+    DecryptionError(String),
+    #[error("FromUtf8Error, {0}")]
+    FromUtf8Error(#[from] std::string::FromUtf8Error),
     #[error("Invalid format error")]
     InvalidFormat,
 }
@@ -401,8 +401,9 @@ impl IntoResponse for AppError {
             Self::KafkaError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::LapinError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::InvalidKey(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            Self::EncryptionFailed(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            Self::DecryptionFailed(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::EncryptionError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
+            Self::DecryptionError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
+            Self::FromUtf8Error(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::InvalidFormat => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Invalid format error".to_string(),

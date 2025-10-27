@@ -12,8 +12,18 @@ use tracing::{Level, warn};
 pub struct Config {
     pub server_addres: String,
     pub frontend_endpoint: String,
+
+    // Encryption key for secrets (32-byte base64 encoded)
+    pub encryption_key: String,
+
+    // Base domain for user deployments (e.g., "app.pinespot.uz")
+    pub base_domain: String,
+
+    // Kubernetes config
+    pub k8s_config_path: Option<String>,
+    pub k8s_in_cluster: bool,
+
     pub base_dir: PathBuf,
-    pub debug: bool,
     pub tracing_level: Level,
 
     // DATABASE
@@ -32,14 +42,6 @@ pub struct Config {
     // KAFKA BROKERS
     pub kafka_brokers: Option<String>,
 
-    // QDRANT
-    pub qdrant_url: Option<String>,
-    pub qdrant_api_key: Option<String>,
-
-    // FIREBASE ADMIN SDK
-    pub firebase_adminsdk: Option<String>,
-    pub firebase_adminsdk_path: Option<PathBuf>,
-
     // GCP
     pub gcp_project_id: Option<String>,
     pub gcs_bucket_name: Option<String>,
@@ -54,7 +56,7 @@ pub struct Config {
     pub github_oauth_client_secret: Option<String>,
     pub github_oauth_redirect_url: Option<String>,
 
-    pub key: Option<String>,
+    pub cookie_key: Option<String>,
 
     // S3
     pub s3_access_key_id: Option<String>,
@@ -86,6 +88,18 @@ pub struct Config {
 
 impl Config {
     pub async fn init() -> Self {
+        let encryption_key = std::env::var("ENCRYPTION_KEY")
+            .expect("ENCRYPTION_KEY must be set - generate with: openssl rand -base64 32");
+
+        let base_domain =
+            std::env::var("BASE_DOMAIN").unwrap_or_else(|_| "app.pinespot.uz".to_string());
+
+        let k8s_config_path = std::env::var("KUBECONFIG").ok();
+        let k8s_in_cluster = std::env::var("K8S_IN_CLUSTER")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse()
+            .unwrap_or(false);
+
         let server_addres = get_config_value(
             "SERVER_ADDRES",
             Some("SERVER_ADDRES"),
@@ -173,25 +187,6 @@ impl Config {
         )
         .await;
 
-        let qdrant_url = get_config_value(
-            "QDRANT_URL",
-            Some("QDRANT_URL"),
-            None,
-            Some("http://localhost:6334".to_string()),
-        )
-        .await;
-        let qdrant_api_key =
-            get_config_value("QDRANT_API_KEY", Some("QDRANT_API_KEY"), None, None).await;
-
-        let firebase_adminsdk_path = base_dir.join("certs/firebase-adminsdk.json");
-        let firebase_adminsdk = get_config_value(
-            "firebase-adminsdk.json",
-            Some("FIREBASE_ADMINSDK"),
-            Some(&firebase_adminsdk_path),
-            None,
-        )
-        .await;
-
         let gcp_project_id =
             get_config_value("GCP_PROJECT_ID", Some("GCP_PROJECT_ID"), None, None).await;
         let gcs_bucket_name =
@@ -249,7 +244,7 @@ impl Config {
         )
         .await;
 
-        let key = get_config_value("KEY", Some("KEY"), None, None).await;
+        let cookie_key = get_config_value("KEY", Some("KEY"), None, None).await;
 
         let s3_access_key_id =
             get_config_value("S3_ACCESS_KEY_ID", Some("S3_ACCESS_KEY_ID"), None, None).await;
@@ -323,9 +318,12 @@ impl Config {
             get_config_value("ssl_mode", Some("SSL_MODE"), None, Some(PgSslMode::Disable)).await;
 
         Config {
+            encryption_key,
+            base_domain,
+            k8s_config_path,
+            k8s_in_cluster,
             server_addres,
             frontend_endpoint,
-            debug,
             tracing_level,
             base_dir,
             database_url,
@@ -336,10 +334,6 @@ impl Config {
             redis_password,
             amqp_url: amqp_addr,
             kafka_brokers,
-            qdrant_url,
-            qdrant_api_key,
-            firebase_adminsdk,
-            firebase_adminsdk_path: Some(firebase_adminsdk_path),
             gcp_project_id,
             gcs_bucket_name,
             gcp_credentials,
@@ -350,7 +344,7 @@ impl Config {
             github_oauth_client_id,
             github_oauth_client_secret,
             github_oauth_redirect_url,
-            key,
+            cookie_key,
             s3_access_key_id,
             s3_secret_key,
             s3_endpoint,

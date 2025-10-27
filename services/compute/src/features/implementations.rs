@@ -15,11 +15,11 @@ use crate::{
     features::{
         repository::{DeploymentRepository, ProjectRepository},
         schemas::{
-            CreateDeploymentRequest, CreateProjectRequest, DeploymentResponse, MessageResponse,
-            ProjectResponse, ScaleDeploymentRequest,
+            CreateDeploymentRequest, CreateProjectRequest, DeploymentResponse, ListResponse,
+            MessageResponse, ProjectResponse, ScaleDeploymentRequest,
         },
     },
-    services::build_kubernetes::Kubernetes,
+    services::{build_kubernetes::Kubernetes, kubernetes::DeploymentService},
 };
 
 // ============================================

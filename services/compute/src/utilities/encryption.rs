@@ -37,12 +37,13 @@ impl EncryptionService {
     pub fn encrypt(&self, plaintext: &str) -> Result<Vec<u8>, AppError> {
         let mut nonce_bytes = [0u8; 12];
         OsRng.fill_bytes(&mut nonce_bytes);
+        #[allow(deprecated)]
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         let ciphertext = self
             .cipher
             .encrypt(nonce, plaintext.as_bytes())
-            .map_err(|e| AppError::EncryptionFailed(e.to_string()))?;
+            .map_err(|e| AppError::EncryptionError(e.to_string()))?;
 
         // Store nonce + ciphertext together
         let mut result = nonce_bytes.to_vec();
@@ -58,14 +59,15 @@ impl EncryptionService {
         }
 
         let (nonce_bytes, ciphertext) = encrypted_data.split_at(12);
+        #[allow(deprecated)]
         let nonce = Nonce::from_slice(nonce_bytes);
 
         let plaintext = self
             .cipher
             .decrypt(nonce, ciphertext)
-            .map_err(|e| AppError::DecryptionFailed(e))?;
+            .map_err(|e| AppError::DecryptionError(e.to_string()))?;
 
-        String::from_utf8(plaintext).map_err(|e| AppError::DecryptionFailed(e.to_string()))
+        String::from_utf8(plaintext).map_err(|e| AppError::FromUtf8Error(e))
     }
 }
 

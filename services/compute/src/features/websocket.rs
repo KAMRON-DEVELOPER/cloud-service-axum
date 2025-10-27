@@ -115,7 +115,7 @@ async fn handle_socket(
             {
                 Ok(msg) => {
                     let json = serde_json::to_string(&msg).unwrap();
-                    if sender.send(Message::Text(json)).await.is_err() {
+                    if sender.send(Message::Text(json.into())).await.is_err() {
                         break;
                     }
                 }
@@ -124,7 +124,7 @@ async fn handle_socket(
                         message: format!("Failed to get status: {}", e),
                     };
                     let json = serde_json::to_string(&error_msg).unwrap();
-                    let _ = sender.send(Message::Text(json)).await;
+                    let _ = sender.send(Message::Text(json.into())).await;
                 }
             }
 
@@ -138,7 +138,7 @@ async fn handle_socket(
             {
                 Ok(msg) => {
                     let json = serde_json::to_string(&msg).unwrap();
-                    if sender.send(Message::Text(json)).await.is_err() {
+                    if sender.send(Message::Text(json.into())).await.is_err() {
                         break;
                     }
                 }
@@ -147,7 +147,7 @@ async fn handle_socket(
                         message: format!("Failed to get pods: {}", e),
                     };
                     let json = serde_json::to_string(&error_msg).unwrap();
-                    let _ = sender.send(Message::Text(json)).await;
+                    let _ = sender.send(Message::Text(json.into())).await;
                 }
             }
         }

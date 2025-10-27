@@ -13,9 +13,9 @@ use validator::Validate;
 
 use crate::{
     features::{
-        implementations::DeploymentService,
         repository::{DeploymentRepository, ProjectRepository},
         schemas::*,
+        services::kubernetes::DeploymentService,
     },
     services::build_kubernetes::Kubernetes,
 };

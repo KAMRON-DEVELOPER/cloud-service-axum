@@ -75,7 +75,6 @@ rustls-pemfile = "2.2.0"
 tokio-rustls = "0.26.3"
 openidconnect = "4.0.1"
 url = { version = "2.5.7", features = ["serde"] }
-cookie = "0.18.1"
 object_store = { version = "0.12.4", features = ["gcp", "aws"] }
 infer = "0.19.0"
 base64 = "0.22.1"

@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let redis = Redis::new(&config).await?;
     let amqp = Amqp::new(&config).await?;
     let kafka = Kafka::new(&config, "")?;
-    let key = Key::from(config.key.as_ref().unwrap().as_bytes());
+    let key = Key::from(config.cookie_key.as_ref().unwrap().as_bytes());
     let google_oauth_client = build_google_oauth_client(&config)?;
     let github_oauth_client = build_github_oauth_client(&config)?;
     let http_client = reqwest::ClientBuilder::new()
