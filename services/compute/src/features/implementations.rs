@@ -46,8 +46,8 @@ pub async fn get_projects(
         .collect();
 
     Ok(Json(ListResponse {
-        data: response,
         total: response.len(),
+        data: response,
     }))
 }
 
@@ -112,7 +112,7 @@ pub async fn update_project(
         &database.pool,
         project_id,
         user_id,
-        *req.name.as_ref(),
+        Some(req.name.as_str()),
         req.description.as_deref(),
     )
     .await?;
@@ -175,8 +175,8 @@ pub async fn get_deployments(
         .collect();
 
     Ok(Json(ListResponse {
-        data: response,
         total: response.len(),
+        data: response,
     }))
 }
 

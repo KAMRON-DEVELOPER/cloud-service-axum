@@ -15,9 +15,8 @@ use crate::{
     features::{
         repository::{DeploymentRepository, ProjectRepository},
         schemas::*,
-        services::kubernetes::DeploymentService,
     },
-    services::build_kubernetes::Kubernetes,
+    services::{build_kubernetes::Kubernetes, kubernetes::DeploymentService},
 };
 
 // ============================================
@@ -44,8 +43,8 @@ pub async fn get_projects(
         .collect();
 
     Ok(Json(ListResponse {
-        data: response,
         total: response.len(),
+        data: response,
     }))
 }
 
@@ -173,8 +172,8 @@ pub async fn get_deployments(
         .collect();
 
     Ok(Json(ListResponse {
-        data: response,
         total: response.len(),
+        data: response,
     }))
 }
 
