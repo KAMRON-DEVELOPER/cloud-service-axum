@@ -29,6 +29,7 @@ pub struct Kubernetes {
 
 impl Kubernetes {
     pub async fn new(config: &Config) -> Result<Self, AppError> {
+        // let client = kube::Client::try_default().await?;
         let client = if config.k8s_in_cluster {
             let kube_config = KubeConfig::incluster()?;
             info!("Connected from incluster environment!");
