@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
-  namespace: cloud
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -15,10 +15,10 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis/redis-stack-server:latest
-          # args: ["redis-server", "/redis-stack.conf"]
+          image: redis:7-alpine
           ports:
             - containerPort: 6379
+          command: ["redis-server", "--requirepass", "changeme-redis-password"]
           resources:
             requests:
               cpu: 250m
@@ -31,7 +31,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: cloud
+  namespace: default
 spec:
   selector:
     app: redis

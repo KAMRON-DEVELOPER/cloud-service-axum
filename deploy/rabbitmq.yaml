@@ -1,8 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  namespace: cloud
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rabbitmq
-  namespace: default
+  namespace: cloud
 spec:
   replicas: 1
   selector:
@@ -15,7 +27,7 @@ spec:
     spec:
       containers:
         - name: rabbitmq
-          image: rabbitmq:3-management-alpine
+          image: rabbitmq:management-alpine
           ports:
             - containerPort: 5672
             - containerPort: 15672
@@ -24,12 +36,26 @@ spec:
               value: cloudservice
             - name: RABBITMQ_DEFAULT_PASS
               value: changeme-rabbitmq-password
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+          resources:
+            requests:
+              cpu: 250m
+              memory: "256M"
+            limits:
+              cpu: 500m
+              memory: "512M"
+      volumes:
+        - name: rabbitmq-data
+          persistentVolumeClaim:
+            claimName: rabbitmq-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
-  namespace: default
+  namespace: cloud
 spec:
   selector:
     app: rabbitmq
@@ -37,7 +63,7 @@ spec:
     - name: amqp
       port: 5672
       targetPort: 5672
-    - name: management
+    - name: http
       port: 15672
       targetPort: 15672
   type: ClusterIP
