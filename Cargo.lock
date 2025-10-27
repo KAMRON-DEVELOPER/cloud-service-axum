@@ -4247,6 +4247,7 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "kube",
+ "kube-client",
  "lapin",
  "oauth2",
  "object_store",

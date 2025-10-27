@@ -175,6 +175,12 @@ pub enum AppError {
     FromUtf8Error(#[from] std::string::FromUtf8Error),
     #[error("Invalid format error")]
     InvalidFormat,
+    #[error("InClusterError, {0}")]
+    InClusterError(#[from] kube_client::config::InClusterError),
+    #[error("KubeconfigError, {0}")]
+    KubeconfigError(#[from] kube_client::config::KubeconfigError),
+    #[error("InferConfigError, {0}")]
+    InferConfigError(#[from] kube_client::config::InferConfigError),
 }
 
 impl IntoResponse for AppError {
@@ -408,6 +414,9 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Invalid format error".to_string(),
             ),
+            Self::InClusterError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::KubeconfigError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            Self::InferConfigError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         };
 
         let body = Json(json!({"error": error_message}));
