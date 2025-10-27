@@ -26,7 +26,6 @@ pub struct Kubernetes {
 impl Kubernetes {
     pub async fn new(config: &Config) -> Result<Self, Box<dyn std::error::Error>> {
         let client = if config.k8s_in_cluster {
-            // Running inside Kubernetes cluster
             let kube_config = KubeConfig::incluster()?;
             Client::try_from(kube_config)?
         } else {
