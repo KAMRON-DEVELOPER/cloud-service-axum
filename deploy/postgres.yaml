@@ -24,7 +24,7 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
+  name: postgres-deployment
   namespace: cloud-ns
 spec:
   replicas: 1
@@ -62,7 +62,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres
+  name: postgres-service
   namespace: cloud-ns
 spec:
   selector:

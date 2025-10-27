@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redpanda
-  namespace: cloud
+  name: redpanda-deployment
+  namespace: cloud-ns
 spec:
   replicas: 1
   selector:
@@ -38,8 +38,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: redpanda
-  namespace: cloud
+  name: redpanda-service
+  namespace: cloud-ns
 spec:
   selector:
     app: redpanda

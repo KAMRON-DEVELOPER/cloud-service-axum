@@ -2,12 +2,12 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: compute-service-sa
-  namespace: default
+  namespace: cloud-ns
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: compute-service-role
+  name: compute-service-cr
 rules:
   - apiGroups: [""]
     resources: ["pods", "services", "secrets"]
@@ -22,12 +22,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: compute-service-binding
+  name: compute-service-crb
 subjects:
   - kind: ServiceAccount
     name: compute-service-sa
-    namespace: default
+    namespace: cloud-ns
 roleRef:
   kind: ClusterRole
-  name: compute-service-role
+  name: compute-service-cr
   apiGroup: rbac.authorization.k8s.io

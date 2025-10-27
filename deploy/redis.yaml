@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis
-  namespace: cloud
+  name: redis-deployment
+  namespace: cloud-ns
 spec:
   replicas: 1
   selector:
@@ -30,8 +30,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis
-  namespace: cloud
+  name: redis-service
+  namespace: cloud-ns
 spec:
   selector:
     app: redis
