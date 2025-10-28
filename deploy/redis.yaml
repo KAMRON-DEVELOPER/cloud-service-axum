@@ -1,20 +1,15 @@
-# 1. Create the dedicated namespace
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: infra-redis
+  name: redis-ns
 ---
-# 2. Create ConfigMap from your 'redis-stack.local.conf'
-#    Run this command:
-#
-#    kubectl create configmap redis-config -n infra-redis \
+#    kubectl create configmap redis-config -n redis-ns \
 #      --from-file=redis.conf=deploy/configurations/redis-stack/redis-stack.local.conf
-#
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: redis-config
-  namespace: infra-redis
+  namespace: redis-ns
 data:
   redis.conf: |
     # ... content of your redis-stack.local.conf ...
@@ -22,12 +17,12 @@ data:
     save 60 1
     appendonly yes
 ---
-# 3. The "Headless" Service for the StatefulSet
+# The "Headless" Service for the StatefulSet
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis-headless
-  namespace: infra-redis
+  name: redis-hs
+  namespace: redis-ns
 spec:
   clusterIP: None
   selector:
@@ -36,12 +31,12 @@ spec:
     - port: 6379
       name: tcp-redis
 ---
-# 4. The "ClusterIP" Service for your apps
+# The "ClusterIP" Service for your apps
 apiVersion: v1
 kind: Service
 metadata:
   name: redis-service
-  namespace: infra-redis
+  namespace: redis-ns
 spec:
   type: ClusterIP
   selector:
@@ -50,15 +45,15 @@ spec:
     - port: 6379
       targetPort: 6379
 ---
-# 5. The StatefulSet (replaces your Deployment)
+# The StatefulSet
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
-  namespace: infra-redis
+  namespace: redis-ns
 spec:
   replicas: 1
-  serviceName: "redis-headless"
+  serviceName: "redis-hs"
   selector:
     matchLabels:
       app: redis
@@ -81,7 +76,6 @@ spec:
             # Mount for config
             - name: redis-conf
               mountPath: /conf
-          # (Add resource requests/limits as you had before)
       volumes:
         - name: redis-conf
           configMap:
@@ -90,7 +84,7 @@ spec:
               - key: redis.conf
                 path: redis.conf
 
-  # 6. This template creates the PVC for pod 'redis-0'
+  # This template creates the PVC for pod 'redis-0'
   volumeClaimTemplates:
     - metadata:
         name: redis-data
@@ -98,4 +92,4 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: 5Gi # Give it some storage
+            storage: 5Gi

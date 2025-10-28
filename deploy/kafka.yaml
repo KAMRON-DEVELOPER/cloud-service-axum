@@ -1,30 +1,21 @@
-# 1. Create the dedicated namespace
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: infra-kafka
+  name: kafka-ns
 ---
-# 2. One-time-setup ConfigMap for the Cluster ID
-#    You must create this *once*.
-#    Run these commands:
-#
-#    export CLUSTER_ID=$(kubectl run -i --rm --tty uuid-gen --image=busybox --restart=Never --command -- cat /proc/sys/kernel/random/uuid)
-#    kubectl create configmap kafka-cluster-id -n infra-kafka --from-literal=CLUSTER_ID=$CLUSTER_ID
-#
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kafka-cluster-id
-  namespace: infra-kafka
+  name: kafka-cm
+  namespace: kafka-ns
 data:
-  CLUSTER_ID: "<your-generated-uuid-goes-here>" # e.g. "mk-4-gLpTjGUPN1R-nN3ow"
+  CLUSTER_ID: "b26c3475-10dd-4d9e-8d6e-4e42a2f6db92"
 ---
-# 3. The "Headless" Service (REQUIRED for StatefulSet)
 apiVersion: v1
 kind: Service
 metadata:
   name: kafka-service
-  namespace: infra-kafka
+  namespace: kafka-ns
 spec:
   clusterIP: None # Headless
   publishNotReadyAddresses: true # Important for pod startup
@@ -40,21 +31,21 @@ spec:
       port: 9093
       targetPort: 9093
 ---
-# 4. The StatefulSet for a 3-node KRaft cluster
+# The StatefulSet for a 3-node KRaft cluster
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: kafka
-  namespace: infra-kafka
+  name: kafka-ss
+  namespace: kafka-ns
 spec:
   serviceName: "kafka-service"
-  replicas: 3 # We want 3 nodes for high availability
+  replicas: 3
   podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: kafka
 
-  # 5. This template will create 'kafka-data-kafka-0', 'kafka-data-kafka-1', etc.
+  # This template will create 'kafka-data-kafka-0', 'kafka-data-kafka-1', etc.
   volumeClaimTemplates:
     - metadata:
         name: kafka-data
@@ -73,10 +64,10 @@ spec:
         # Mount the ConfigMap with the cluster ID
         - name: kafka-config
           configMap:
-            name: kafka-cluster-id
+            name: kafka-cm
       containers:
         - name: kafka
-          image: apache/kafka:3.6.1 # Use a specific version, not :latest
+          image: apache/kafka:4.0.1
           ports:
             - containerPort: 9092
               name: kafka
@@ -97,12 +88,12 @@ spec:
 
             # This is the dynamic list of ALL controller nodes
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "0@kafka-0.kafka-service.infra-kafka.svc.cluster.local:9093,1@kafka-1.kafka-service.infra-kafka.svc.cluster.local:9093,2@kafka-2.kafka-service.infra-kafka.svc.cluster.local:9093"
+              value: "0@kafka-0.kafka-service.kafka-ns.svc.cluster.local:9093,1@kafka-1.kafka-service.kafka-ns.svc.cluster.local:9093,2@kafka-2.kafka-service.kafka-ns.svc.cluster.local:9093"
 
             - name: KAFKA_LOG_DIRS
               value: "/var/lib/kafka/data"
 
-            # 6. Now we can have a proper replication factor
+            # Now we can have a proper replication factor
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "3"
             - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
@@ -110,7 +101,7 @@ spec:
             - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
               value: "2" # Minimum in-sync replicas
 
-          # 7. This script runs on start to configure each pod uniquely
+          # This script runs on start to configure each pod uniquely
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -120,7 +111,7 @@ spec:
               export KAFKA_NODE_ID=${HOSTNAME##*-}
 
               # Set advertised listener to this pod's unique DNS name
-              export KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://${HOSTNAME}.kafka-service.infra-kafka.svc.cluster.local:9092"
+              export KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://${HOSTNAME}.kafka-service.kafka-ns.svc.cluster.local:9092"
 
               # Get the shared Cluster ID
               export KAFKA_CLUSTER_ID=$(cat /config/CLUSTER_ID)

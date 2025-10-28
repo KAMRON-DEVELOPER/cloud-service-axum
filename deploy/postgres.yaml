@@ -1,36 +1,29 @@
-# 1. Create the dedicated namespace
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: infra-postgres
+  name: postgres-ns
 ---
-# 2. Your secret, just moved to the new namespace
 apiVersion: v1
 kind: Secret
 metadata:
   name: postgres-secret
-  namespace: infra-postgres
+  namespace: postgres-ns
 type: Opaque
 stringData:
   POSTGRES_USER: user
   POSTGRES_PASSWORD: password
   POSTGRES_DB: cloud_service_db
 ---
-# 3. Load your config files into a ConfigMap
-#    This assumes your .conf/.sh files are in 'deploy/configurations/postgresql'
-#    You must create this from your files:
-#
-#    kubectl create configmap postgres-config -n infra-postgres \
+#    kubectl create configmap postgres-cm -n postgres-ns \
 #      --from-file=deploy/configurations/postgresql/postgresql.conf \
 #      --from-file=deploy/configurations/postgresql/pg_hba.conf \
 #      --from-file=deploy/configurations/postgresql/postgres-entrypoint.sh
-#
-#    (This is an example YAML of what that command creates)
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: postgres-config
-  namespace: infra-postgres
+  name: postgres-cm
+  namespace: postgres-ns
 data:
   # Data from your files would be here
   postgresql.conf: |
@@ -44,26 +37,26 @@ data:
     # ... content of your script ...
     exec postgres
 ---
-# 4. The "Headless" Service for the StatefulSet's internal DNS
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-headless
-  namespace: infra-postgres
+  name: postgres-hs
+  namespace: postgres-ns
 spec:
   clusterIP: None # This makes it "headless"
   selector:
     app: postgres
   ports:
-    - port: 5432
-      name: tcp
+    - name: tcp
+      protocol: TCP
+      port: 5432
 ---
-# 5. The "ClusterIP" Service for your other apps to connect to
+# The "ClusterIP" Service for your other apps to connect to
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres-service
-  namespace: infra-postgres
+  namespace: postgres-ns
 spec:
   type: ClusterIP
   selector:
@@ -72,15 +65,14 @@ spec:
     - port: 5432
       targetPort: 5432
 ---
-# 6. The StatefulSet (replaces your Deployment)
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
-  namespace: infra-postgres
+  namespace: postgres-ns
 spec:
   replicas: 1
-  serviceName: "postgres-headless" # Must match the headless service
+  serviceName: "postgres-hs" # Must match the headless service
   selector:
     matchLabels:
       app: postgres
@@ -101,30 +93,28 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-            - name: postgres-config-files
+            - name: postgres-cm-files
               mountPath: /docker-entrypoint-initdb.d/ # Scripts here run on init
             - name: postgres-conf
               mountPath: /etc/postgresql/ # Mount main .conf
-          # (Add resource requests/limits as you had before)
       volumes:
-        # Mount the ConfigMap as two separate volumes
-        - name: postgres-config-files
+        - name: postgres-cm-files
           configMap:
-            name: postgres-config
+            name: postgres-cm
             items:
               - key: postgres-entrypoint.sh
                 path: init.sh
             defaultMode: 0755 # Make the script executable
         - name: postgres-conf
           configMap:
-            name: postgres-config
+            name: postgres-cm
             items:
               - key: postgresql.conf
                 path: postgresql.conf
               - key: pg_hba.conf
                 path: pg_hba.conf
 
-  # 7. This template creates a new PVC for each pod
+  # This template creates a new PVC for each pod
   volumeClaimTemplates:
     - metadata:
         name: postgres-data # Name of the volumeMount
