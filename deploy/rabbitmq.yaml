@@ -101,7 +101,6 @@ spec:
             items:
               - key: rabbitmq.conf
                 path: rabbitmq.conf
-
   volumeClaimTemplates:
     - metadata:
         name: rabbitmq-data

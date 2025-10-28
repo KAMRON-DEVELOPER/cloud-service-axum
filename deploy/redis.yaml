@@ -95,7 +95,6 @@ spec:
             items:
               - key: redis.conf
                 path: redis.conf
-
   volumeClaimTemplates:
     - metadata:
         name: redis-data
