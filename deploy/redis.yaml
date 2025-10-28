@@ -3,8 +3,6 @@ kind: Namespace
 metadata:
   name: redis-ns
 ---
-#    kubectl create configmap redis-config -n redis-ns \
-#      --from-file=redis.conf=deploy/configurations/redis-stack/redis-stack.local.conf
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -17,7 +15,6 @@ data:
     save 60 1
     appendonly yes
 ---
-# The "Headless" Service for the StatefulSet
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,7 +28,6 @@ spec:
     - port: 6379
       name: tcp-redis
 ---
-# The "ClusterIP" Service for your apps
 apiVersion: v1
 kind: Service
 metadata:
@@ -45,7 +41,6 @@ spec:
     - port: 6379
       targetPort: 6379
 ---
-# The StatefulSet
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -65,17 +60,34 @@ spec:
       containers:
         - name: redis
           image: redis/redis-stack-server:latest
-          # Tell redis to use our mounted config file
           args: ["/conf/redis.conf"]
           ports:
             - containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
           volumeMounts:
-            # Mount for persistence
             - name: redis-data
               mountPath: /data
-            # Mount for config
             - name: redis-conf
               mountPath: /conf
+              readOnly: true
       volumes:
         - name: redis-conf
           configMap:
@@ -84,12 +96,12 @@ spec:
               - key: redis.conf
                 path: redis.conf
 
-  # This template creates the PVC for pod 'redis-0'
   volumeClaimTemplates:
     - metadata:
         name: redis-data
       spec:
         accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
         resources:
           requests:
-            storage: 5Gi
+            storage: 1Gi

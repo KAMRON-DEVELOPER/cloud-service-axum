@@ -13,8 +13,6 @@ stringData:
   RABBITMQ_DEFAULT_USER: guest
   RABBITMQ_DEFAULT_PASS: guest
 ---
-#    kubectl create configmap rabbitmq-config -n rabbitmq-ns \
-#      --from-file=rabbitmq.conf=deploy/configurations/rabbitmq/rabbitmq.local.conf
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -25,7 +23,6 @@ data:
     # ... content of your rabbitmq.local.conf ...
     loopback_users.guest = false
 ---
-# The "Headless" Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -41,7 +38,6 @@ spec:
     - port: 15672
       name: http-mgmt
 ---
-# The "ClusterIP" Service for your apps
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,7 +55,6 @@ spec:
       port: 15672
       targetPort: 15672
 ---
-# The StatefulSet
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -80,16 +75,25 @@ spec:
         - name: rabbitmq
           image: rabbitmq:management-alpine
           ports:
-            - containerPort: 5672 # amqp
-            - containerPort: 15672 # http management
+            - containerPort: 5672
+            - containerPort: 15672
           envFrom:
             - secretRef:
                 name: rabbitmq-secret
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq
             - name: rabbitmq-conf
-              mountPath: /etc/rabbitmq/
+              mountPath: /etc/rabbitmq/rabbitmq.conf
+              subPath: rabbitmq.conf
+              readOnly: true
       volumes:
         - name: rabbitmq-conf
           configMap:
@@ -98,12 +102,12 @@ spec:
               - key: rabbitmq.conf
                 path: rabbitmq.conf
 
-  # Template for the persistent volume
   volumeClaimTemplates:
     - metadata:
         name: rabbitmq-data
       spec:
         accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
         resources:
           requests:
-            storage: 5Gi
+            storage: 1Gi

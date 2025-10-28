@@ -14,18 +14,12 @@ stringData:
   POSTGRES_PASSWORD: password
   POSTGRES_DB: cloud_service_db
 ---
-#    kubectl create configmap postgres-cm -n postgres-ns \
-#      --from-file=deploy/configurations/postgresql/postgresql.conf \
-#      --from-file=deploy/configurations/postgresql/pg_hba.conf \
-#      --from-file=deploy/configurations/postgresql/postgres-entrypoint.sh
-
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-cm
   namespace: postgres-ns
 data:
-  # Data from your files would be here
   postgresql.conf: |
     # ... content of your postgresql.conf ...
     listen_addresses = '*'
@@ -43,7 +37,7 @@ metadata:
   name: postgres-hs
   namespace: postgres-ns
 spec:
-  clusterIP: None # This makes it "headless"
+  clusterIP: None
   selector:
     app: postgres
   ports:
@@ -51,7 +45,6 @@ spec:
       protocol: TCP
       port: 5432
 ---
-# The "ClusterIP" Service for your other apps to connect to
 apiVersion: v1
 kind: Service
 metadata:
@@ -60,7 +53,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: postgres # Selects the pods created by the StatefulSet
+    app: postgres
   ports:
     - port: 5432
       targetPort: 5432
@@ -72,7 +65,7 @@ metadata:
   namespace: postgres-ns
 spec:
   replicas: 1
-  serviceName: "postgres-hs" # Must match the headless service
+  serviceName: "postgres-hs"
   selector:
     matchLabels:
       app: postgres
@@ -89,14 +82,13 @@ spec:
           envFrom:
             - secretRef:
                 name: postgres-secret
-          # Mount the config files
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
             - name: postgres-cm-files
-              mountPath: /docker-entrypoint-initdb.d/ # Scripts here run on init
+              mountPath: /docker-entrypoint-initdb.d/
             - name: postgres-conf
-              mountPath: /etc/postgresql/ # Mount main .conf
+              mountPath: /etc/postgresql/
       volumes:
         - name: postgres-cm-files
           configMap:
@@ -104,7 +96,7 @@ spec:
             items:
               - key: postgres-entrypoint.sh
                 path: init.sh
-            defaultMode: 0755 # Make the script executable
+            defaultMode: 0755
         - name: postgres-conf
           configMap:
             name: postgres-cm
@@ -114,13 +106,12 @@ spec:
               - key: pg_hba.conf
                 path: pg_hba.conf
 
-  # This template creates a new PVC for each pod
   volumeClaimTemplates:
     - metadata:
-        name: postgres-data # Name of the volumeMount
+        name: postgres-data
       spec:
         accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
         resources:
           requests:
-            storage: 10Gi
-        # storageClassName: standard # (Optional)
+            storage: 1Gi
