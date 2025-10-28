@@ -4,18 +4,6 @@ metadata:
   name: redis-ns
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: redis-config
-  namespace: redis-ns
-data:
-  redis.conf: |
-    # ... content of your redis-stack.local.conf ...
-    # Make sure persistence is enabled!
-    save 60 1
-    appendonly yes
----
-apiVersion: v1
 kind: Service
 metadata:
   name: redis-hs

@@ -14,16 +14,6 @@ stringData:
   RABBITMQ_DEFAULT_PASS: guest
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rabbitmq-config
-  namespace: rabbitmq-ns
-data:
-  rabbitmq.conf: |
-    # ... content of your rabbitmq.local.conf ...
-    loopback_users.guest = false
----
-apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq-hs

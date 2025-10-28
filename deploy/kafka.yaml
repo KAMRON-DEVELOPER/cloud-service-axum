@@ -4,14 +4,6 @@ metadata:
   name: kafka-ns
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kafka-cm
-  namespace: kafka-ns
-data:
-  CLUSTER_ID: "b26c3475-10dd-4d9e-8d6e-4e42a2f6db92"
----
-apiVersion: v1
 kind: Service
 metadata:
   name: kafka-service

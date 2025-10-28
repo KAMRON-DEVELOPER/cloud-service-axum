@@ -15,23 +15,6 @@ stringData:
   POSTGRES_DB: cloud_service_db
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: postgres-cm
-  namespace: postgres-ns
-data:
-  postgresql.conf: |
-    # ... content of your postgresql.conf ...
-    listen_addresses = '*'
-  pg_hba.conf: |
-    # ... content of your pg_hba.conf ...
-    host    all             all             0.0.0.0/0               md5
-  postgres-entrypoint.sh: |
-    #!/bin/bash
-    # ... content of your script ...
-    exec postgres
----
-apiVersion: v1
 kind: Service
 metadata:
   name: postgres-hs
@@ -77,6 +60,12 @@ spec:
       containers:
         - name: postgres
           image: postgres:bookworm
+          command:
+            - "postgres"
+            - "-c"
+            - "config_file=/etc/postgresql/postgresql.conf"
+            - "-c"
+            - "hba_file=/etc/postgresql/pg_hba.conf"
           ports:
             - containerPort: 5432
           envFrom:
