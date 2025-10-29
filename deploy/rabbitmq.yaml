@@ -53,6 +53,7 @@ metadata:
 spec:
   replicas: 1
   serviceName: "rabbitmq-hs"
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: rabbitmq
