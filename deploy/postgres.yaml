@@ -98,7 +98,7 @@ spec:
             periodSeconds: 10
           volumeMounts:
             - name: postgres-data
-              mountPath: /var/lib/postgresql/data
+              mountPath: /var/lib/postgresql
             - name: postgres-volume
               mountPath: /etc/postgresql/
       volumes:
