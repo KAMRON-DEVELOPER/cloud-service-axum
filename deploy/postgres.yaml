@@ -78,12 +78,12 @@ spec:
       containers:
         - name: postgres
           image: postgres:bookworm
-          command:
-            - "postgres"
-            - "-c"
-            - "config_file=/etc/postgresql/postgresql.conf"
-            - "-c"
-            - "hba_file=/etc/postgresql/pg_hba.conf"
+          # command:
+          #   - "postgres"
+          #   - "-c"
+          #   - "config_file=/etc/postgresql/postgresql.conf"
+          #   - "-c"
+          #   - "hba_file=/etc/postgresql/pg_hba.conf"
           ports:
             - containerPort: 5432
           envFrom:
