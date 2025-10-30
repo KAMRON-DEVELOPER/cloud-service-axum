@@ -23,6 +23,14 @@ spec:
       port: 9093
       targetPort: 9093
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-cm
+  namespace: kafka-ns
+data:
+  CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk" # Generated once: kafka-storage.sh random-uuid
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -65,19 +73,21 @@ spec:
               value: "2"
             - name: KAFKA_LOG_DIRS
               value: "/var/lib/kafka/data"
+            - name: KAFKA_CLUSTER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-cm
+                  key: CLUSTER_ID
           command: ["/bin/bash", "-c"]
           args:
             - |
               set -e
 
-              # Get the pod's index (0, 1, or 2) from its hostname
+              # Bash expansion | get the pod's index (0, 1, or 2) from its hostname
               export KAFKA_NODE_ID=${HOSTNAME##*-}
 
               # Set advertised listener to this pod's unique DNS name
               export KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://${HOSTNAME}.kafka-hs.kafka-ns.svc.cluster.local:9092"
-
-              # Get the shared Cluster ID
-              export KAFKA_CLUSTER_ID=$(cat /config/CLUSTER_ID)
 
               CONFIG_FILE="/opt/kafka/config/kraft/server.properties"
 
@@ -95,12 +105,6 @@ spec:
           volumeMounts:
             - name: kafka-data
               mountPath: /var/lib/kafka/data
-            - name: kafka-volume
-              mountPath: /config
-      volumes:
-        - name: kafka-volume
-          configMap:
-            name: kafka-conf
   volumeClaimTemplates:
     - metadata:
         name: kafka-data

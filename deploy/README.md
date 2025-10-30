@@ -1,61 +1,202 @@
-# Deployments
+# Deployment Guide
 
-## 1. Create the Postgres ConfigMap from your files
+This guide covers deploying PostgreSQL, Redis, RabbitMQ, and Kafka services to your K3s cluster.
 
-`kubectl create configmap postgres-cm -n postgres-ns \
-  --from-file=deploy/configurations/postgresql/postgresql.conf \
-  --from-file=deploy/configurations/postgresql/pg_hba.conf \
-  --from-file=deploy/configurations/postgresql/postgres-entrypoint.sh`
+## Prerequisites
 
-## 2. Create the Redis ConfigMap
+- K3s cluster running (master + agent nodes)
+- `kubectl` configured to connect to your cluster
+- Local storage provisioner enabled (k3s includes `local-path` by default)
 
-`kubectl create configmap redis-config -n redis-ns \
-  --from-file=redis.conf=deploy/configurations/redis-stack/redis-stack.local.conf`
+## Setup Steps
 
-## 3. Create the RabbitMQ ConfigMap
+### 1. Create Configuration ConfigMaps
 
-`kubectl create configmap rabbitmq-config -n rabbitmq-ns \
-  --from-file=rabbitmq.conf=deploy/configurations/rabbitmq/rabbitmq.local.conf`
+These ConfigMaps contain service configuration files that will be mounted into the pods.
 
-## For Postgres
+#### PostgreSQL Configuration
 
-`kubectl create configmap postgres-cm -n postgres-ns \
-  --from-file=postgres-entrypoint.sh=deploy/configurations/postgresql/postgres-entrypoint.sh \
-  --from-file=postgresql.conf=deploy/configurations/postgresql/postgresql.conf \
-  --from-file=pg_hba.conf=deploy/configurations/postgresql/pg_hba.conf`
+```bash
+kubectl create configmap postgres-conf -n postgres-ns \
+  --from-file=postgresql.conf=deploy/configurations/postgresql/postgresql.local.conf \
+  --from-file=pg_hba.conf=deploy/configurations/postgresql/pg_hba.local.conf
+```
 
-## For Redis (assuming local.conf is what you want)
+#### Redis Configuration
 
-`kubectl create configmap redis-config -n redis-ns \
-  --from-file=redis.conf=deploy/configurations/redis-stack/redis-stack.local.conf`
+```bash
+kubectl create configmap redis-conf -n redis-ns \
+  --from-file=redis.conf=deploy/configurations/redis-stack/redis-stack.local.conf
+```
 
-## For RabbitMQ (assuming local.conf is what you want)
+#### RabbitMQ Configuration
 
-`kubectl create configmap rabbitmq-config -n rabbitmq-ns \
-  --from-file=rabbitmq.conf=deploy/configurations/rabbitmq/rabbitmq.local.conf`
+```bash
+kubectl create configmap rabbitmq-conf -n rabbitmq-ns \
+  --from-file=rabbitmq.conf=deploy/configurations/rabbitmq/rabbitmq.local.conf
+```
 
-## For Kafka (Kafka seems to be missing its ConfigMap YAML, but your StatefulSet references `kafka-cm`)
+### 2. Deploy Services
 
-## You'll need to create `kafka-cm` with a CLUSTER_ID file, e.g
+Apply all deployment manifests:
 
-## echo $(/opt/kafka/bin/kafka-storage.sh random-uuid) > /tmp/CLUSTER_ID
+```bash
+kubectl apply -f deploy/postgres.yaml
+kubectl apply -f deploy/redis.yaml
+kubectl apply -f deploy/rabbitmq.yaml
+kubectl apply -f deploy/kafka.yaml
+```
 
-## kubectl create configmap kafka-cm -n kafka-ns --from-file=CLUSTER_ID=/tmp/CLUSTER_ID
+Or apply all at once:
 
-`kubectl apply -f deploy/`
+```bash
+kubectl apply -f deploy/
+```
 
-## Terminal 1: Postgres
+### 3. Verify Deployments
 
-`kubectl port-forward -n postgres-ns svc/postgres-service 5432:5432`
+Check that all pods are running:
 
-## Terminal 2: Redis
+```bash
+kubectl get pods -n postgres-ns
+kubectl get pods -n redis-ns
+kubectl get pods -n rabbitmq-ns
+kubectl get pods -n kafka-ns
+```
 
-`kubectl port-forward -n redis-ns svc/redis-service 6379:6379`
+Check StatefulSets:
 
-## Terminal 3: RabbitMQ
+```bash
+kubectl get statefulsets --all-namespaces
+```
 
-`kubectl port-forward -n rabbitmq-ns svc/rabbitmq-service 5672:5672 15672:15672`
+## Port Forwarding for Local Access
 
-## Terminal 4: Kafka (must target a specific pod, as the service is headless)
+To access services from your local machine, use port forwarding:
 
-`kubectl port-forward -n kafka-ns kafka-ss-0 9092:9092`
+### PostgreSQL
+
+```bash
+kubectl port-forward -n postgres-ns svc/postgres-service 5432:5432
+```
+
+Connection string: `postgresql://postgres:password@localhost:5432/cloud_service_db`
+
+### Redis
+
+```bash
+kubectl port-forward -n redis-ns svc/redis-service 6379:6379
+```
+
+Connection string: `redis://default:password@localhost:6379`
+
+### RabbitMQ
+
+```bash
+kubectl port-forward -n rabbitmq-ns svc/rabbitmq-service 5672:5672 15672:15672
+```
+
+- AMQP: `amqp://guest:password@localhost:5672`
+- Management UI: `http://localhost:15672` (username: `guest`, password: `password`)
+
+### Kafka
+
+```bash
+# Port-forward to a specific broker pod
+kubectl port-forward -n kafka-ns kafka-ss-0 9092:9092
+```
+
+Bootstrap server: `localhost:9092`
+
+## Service Details
+
+### PostgreSQL
+
+- **Namespace**: `postgres-ns`
+- **Service**: `postgres-service` (ClusterIP)
+- **Headless Service**: `postgres-hs`
+- **Image**: `postgres:bookworm`
+- **User**: `postgres`
+- **Password**: `password` (from Secret)
+- **Database**: `cloud_service_db`
+- **Storage**: 1Gi PVC per pod
+
+### Redis
+
+- **Namespace**: `redis-ns`
+- **Service**: `redis-service` (ClusterIP)
+- **Headless Service**: `redis-hs`
+- **Image**: `redis/redis-stack-server:latest`
+- **User**: `default`
+- **Password**: `password` (from Secret)
+- **Storage**: 1Gi PVC per pod
+- **Features**: RediSearch, ReJSON modules enabled
+
+### RabbitMQ
+
+- **Namespace**: `rabbitmq-ns`
+- **Service**: `rabbitmq-service` (ClusterIP)
+- **Headless Service**: `rabbitmq-hs`
+- **Image**: `rabbitmq:management-alpine`
+- **User**: `guest`
+- **Password**: `password` (from Secret)
+- **Ports**: 5672 (AMQP), 15672 (Management UI)
+- **Storage**: 1Gi PVC per pod
+
+### Kafka
+
+- **Namespace**: `kafka-ns`
+- **Headless Service**: `kafka-hs`
+- **Image**: `apache/kafka:latest`
+- **Mode**: KRaft (no ZooKeeper)
+- **Replicas**: 3 brokers
+- **Replication Factor**: 3
+- **Min ISR**: 2
+- **Storage**: 1Gi PVC per pod
+
+## Cleanup
+
+To remove all services:
+
+```bash
+kubectl delete -f deploy/postgres.yaml
+kubectl delete -f deploy/redis.yaml
+kubectl delete -f deploy/rabbitmq.yaml
+kubectl delete -f deploy/kafka.yaml
+```
+
+Delete ConfigMaps:
+
+```bash
+kubectl delete configmap postgres-conf -n postgres-ns
+kubectl delete configmap redis-conf -n redis-ns
+kubectl delete configmap rabbitmq-conf -n rabbitmq-ns
+```
+
+## Troubleshooting
+
+### View logs
+
+```bash
+kubectl logs -n <namespace> <pod-name>
+```
+
+### Describe resources
+
+```bash
+kubectl describe pod -n <namespace> <pod-name>
+kubectl describe statefulset -n <namespace> <statefulset-name>
+```
+
+### Execute commands in pods
+
+```bash
+kubectl exec -it -n <namespace> <pod-name> -- /bin/bash
+```
+
+### Check persistent volumes
+
+```bash
+kubectl get pv
+kubectl get pvc --all-namespaces
+```
