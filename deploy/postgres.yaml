@@ -64,6 +64,13 @@ spec:
       labels:
         app: postgres
     spec:
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "1Gi"
       containers:
         - name: postgres
           image: postgres:bookworm
@@ -80,6 +87,11 @@ spec:
                 name: postgres-secret
             - configMapRef:
                 name: postgres-cm
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
