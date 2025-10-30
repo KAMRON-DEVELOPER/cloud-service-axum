@@ -105,9 +105,9 @@ spec:
               mountPath: /conf
               readOnly: true
       volumes:
-        - name: redis-conf
+        - name: redis-volume
           configMap:
-            name: redis-volume
+            name: redis-conf
             items:
               - key: redis.conf
                 path: redis.conf
