@@ -95,12 +95,12 @@ spec:
           volumeMounts:
             - name: kafka-data
               mountPath: /var/lib/kafka/data
-            - name: kafka-conf
+            - name: kafka-volume
               mountPath: /config
       volumes:
-        - name: kafka-conf
+        - name: kafka-volume
           configMap:
-            name: kafka-cm
+            name: kafka-conf
   volumeClaimTemplates:
     - metadata:
         name: kafka-data
@@ -109,15 +109,15 @@ spec:
         resources:
           requests:
             storage: 1Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kafka-pvc
-  namespace: kafka-ns
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: kafka-pvc
+#   namespace: kafka-ns
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 1Gi
