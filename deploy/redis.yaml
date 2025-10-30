@@ -79,7 +79,7 @@ spec:
       volumes:
         - name: redis-conf
           configMap:
-            name: redis-config
+            name: redis-cm
             items:
               - key: redis.conf
                 path: redis.conf
