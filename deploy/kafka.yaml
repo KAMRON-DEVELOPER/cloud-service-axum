@@ -58,6 +58,13 @@ spec:
       containers:
         - name: kafka
           image: apache/kafka:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              export KAFKA_BROKER_ID=${HOSTNAME##*-}
+              export KAFKA_NODE_ID=${HOSTNAME##*-}
+              exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
           ports:
             - containerPort: 9092
               name: kafka
