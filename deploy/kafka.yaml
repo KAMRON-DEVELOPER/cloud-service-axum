@@ -6,7 +6,7 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kafka-service
+  name: kafka-hs
   namespace: kafka-ns
 spec:
   clusterIP: None
@@ -29,7 +29,7 @@ metadata:
   name: kafka-ss
   namespace: kafka-ns
 spec:
-  serviceName: "kafka-service"
+  serviceName: "kafka-hs"
   replicas: 3
   podManagementPolicy: Parallel
   selector:
