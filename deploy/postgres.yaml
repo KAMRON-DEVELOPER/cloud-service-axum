@@ -74,18 +74,9 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-            - name: postgres-cm-files
-              mountPath: /docker-entrypoint-initdb.d/
             - name: postgres-conf
               mountPath: /etc/postgresql/
       volumes:
-        - name: postgres-cm-files
-          configMap:
-            name: postgres-cm
-            items:
-              - key: postgres-entrypoint.sh
-                path: init.sh
-            defaultMode: 0755
         - name: postgres-conf
           configMap:
             name: postgres-cm

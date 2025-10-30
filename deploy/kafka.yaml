@@ -9,8 +9,8 @@ metadata:
   name: kafka-service
   namespace: kafka-ns
 spec:
-  clusterIP: None # Headless
-  publishNotReadyAddresses: true # Important for pod startup
+  clusterIP: None
+  publishNotReadyAddresses: true
   selector:
     app: kafka
   ports:
