@@ -94,11 +94,11 @@ spec:
               mountPath: /etc/rabbitmq/rabbitmq.conf
               subPath: rabbitmq.conf
               readOnly: true
-      readinessProbe:
-        exec:
-          command: ["rabbitmq-diagnostics", "ping"]
-        initialDelaySeconds: 10
-        periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
       volumes:
         - name: rabbitmq-volume
           configMap:
