@@ -15,16 +15,16 @@ spec:
     volumes:
       - id: 0
         type: persistent-claim
-        size: 5Gi
+        size: 2Gi
         deleteClaim: false
         kraftMetadata: shared
   resources:
     requests:
-      memory: 1.5Gi
-      cpu: 500m
+      memory: 750Mi
+      cpu: 250m
     limits:
-      memory: 2Gi
-      cpu: 1000m
+      memory: 1Gi
+      cpu: 500m
 ---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
@@ -51,31 +51,31 @@ spec:
       default.replication.factor: 1
       min.insync.replicas: 1
       # OPTIONAL: Add these for better single-node performance
-      num.network.threads: 3
-      num.io.threads: 4
-      log.retention.hours: 168 # 7 days
-      log.segment.bytes: 536870912 # 512MB
+      num.network.threads: 2
+      num.io.threads: 3
+      log.retention.hours: 24 # 1 days
+      log.segment.bytes: 268435456 # 256MB
     resources:
       requests:
-        memory: 1.5Gi
-        cpu: 500m
+        memory: 750Mi
+        cpu: 250m
       limits:
-        memory: 2Gi
-        cpu: 1000m
+        memory: 1Gi
+        cpu: 500m
   entityOperator:
     topicOperator:
       resources:
         requests:
+          memory: 64Mi
+          cpu: 50m
+        limits:
           memory: 128Mi
           cpu: 100m
-        limits:
-          memory: 256Mi
-          cpu: 200m
     userOperator:
       resources:
         requests:
+          memory: 64Mi
+          cpu: 50m
+        limits:
           memory: 128Mi
           cpu: 100m
-        limits:
-          memory: 256Mi
-          cpu: 200m
