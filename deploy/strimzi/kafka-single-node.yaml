@@ -1,0 +1,79 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: kafka-node-pool
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 5Gi
+        deleteClaim: false
+        kraftMetadata: shared
+  resources:
+    requests:
+      memory: 1.5Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: kafka-cluster
+spec:
+  kafka:
+    version: 4.1.0
+    metadataVersion: 4.1-IV1
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      # OPTIONAL: Add these for better single-node performance
+      num.network.threads: 3
+      num.io.threads: 4
+      log.retention.hours: 168 # 7 days
+      log.segment.bytes: 536870912 # 512MB
+    resources:
+      requests:
+        memory: 1.5Gi
+        cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+  entityOperator:
+    topicOperator:
+      resources:
+        requests:
+          memory: 128Mi
+          cpu: 100m
+        limits:
+          memory: 256Mi
+          cpu: 200m
+    userOperator:
+      resources:
+        requests:
+          memory: 128Mi
+          cpu: 100m
+        limits:
+          memory: 256Mi
+          cpu: 200m
