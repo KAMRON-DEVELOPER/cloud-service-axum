@@ -63,18 +63,19 @@ spec:
         memory: 750Mi
   entityOperator:
     topicOperator:
+      bootstrapServers: kafka-cluster-kafka-bootstrap:9093
       resources:
         requests:
-          memory: 64Mi
-          cpu: 50m
-        limits:
-          memory: 128Mi
+          memory: 256Mi
           cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 250m
     userOperator:
       resources:
         requests:
-          memory: 64Mi
-          cpu: 50m
-        limits:
-          memory: 128Mi
+          memory: 256Mi
           cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 250m
