@@ -20,11 +20,11 @@ spec:
         kraftMetadata: shared
   resources:
     requests:
-      memory: 750Mi
       cpu: 250m
+      memory: 500Mi
     limits:
-      memory: 1Gi
       cpu: 500m
+      memory: 750Mi
 ---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
@@ -50,18 +50,17 @@ spec:
       transaction.state.log.min.isr: 1
       default.replication.factor: 1
       min.insync.replicas: 1
-      # OPTIONAL: Add these for better single-node performance
       num.network.threads: 2
       num.io.threads: 3
       log.retention.hours: 24 # 1 days
       log.segment.bytes: 268435456 # 256MB
     resources:
       requests:
-        memory: 750Mi
         cpu: 250m
+        memory: 500Mi
       limits:
-        memory: 1Gi
         cpu: 500m
+        memory: 750Mi
   entityOperator:
     topicOperator:
       resources:

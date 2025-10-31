@@ -67,8 +67,8 @@ spec:
           cpu: "128m"
           memory: "128Mi"
         limits:
-          cpu: "1"
-          memory: "1Gi"
+          cpu: "256m"
+          memory: "256Mi"
       containers:
         - name: redis
           image: redis/redis-stack-server:latest
