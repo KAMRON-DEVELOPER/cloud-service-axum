@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             HeaderValue::from_static("http://localhost:3000"),
             HeaderValue::from_static("http://127.0.0.1:5173"),
             HeaderValue::from_static("http://localhost:5173"),
-            HeaderValue::from_static("https://pinespot.uz"),
+            HeaderValue::from_static("https://kronk.uz"),
         ])
         .allow_methods([
             Method::GET,
