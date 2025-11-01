@@ -36,6 +36,12 @@ use crate::{
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("**************************** 0 ****************************");
+
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     println!("**************************** 1 ****************************");
 
     match dotenvy::dotenv() {

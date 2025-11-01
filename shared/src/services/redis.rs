@@ -17,6 +17,14 @@ impl Redis {
             .clone()
             .ok_or(AppError::RedisUrlNotSetError)?;
 
+        if config.client_cert.is_some() && config.client_key.is_some() {
+            debug!("TLS certificates found — connecting WITHOUT TLS");
+
+            let client = Client::open(redis_url)?;
+            let connection = client.get_multiplexed_tokio_connection().await?;
+            return Ok(Self { connection });
+        }
+
         if let Some(client_cert) = &config.client_cert
             && let Some(client_key) = &config.client_key
         {
