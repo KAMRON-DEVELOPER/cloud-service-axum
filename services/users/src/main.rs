@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("**************************** 7 ****************************");
     let amqp = Amqp::new(&config).await?;
     println!("**************************** 8 ****************************");
-    let kafka = Kafka::new(&config, "")?;
+    let kafka = Kafka::new(&config, "users-service-group")?;
     println!("**************************** 9 ****************************");
     let key = Key::from(config.cookie_key.as_ref().unwrap().as_bytes());
     println!("**************************** 10 ****************************");

@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let redis = Redis::new(&config).await?;
     let kubernetes = Kubernetes::new(&config).await?;
     let amqp = Amqp::new(&config).await?;
-    let kafka = Kafka::new(&config, "")?;
+    let kafka = Kafka::new(&config, "compute-service-group")?;
     let http_client = reqwest::ClientBuilder::new()
         .redirect(reqwest::redirect::Policy::none())
         .build()?;

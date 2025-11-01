@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database = Database::new(&config).await?;
     let redis = Redis::new(&config).await?;
     let amqp = Amqp::new(&config).await?;
-    let kafka = Kafka::new(&config, "")?;
+    let kafka = Kafka::new(&config, "billing-service-group")?;
     let http_client = reqwest::ClientBuilder::new()
         .redirect(reqwest::redirect::Policy::none())
         .build()?;
