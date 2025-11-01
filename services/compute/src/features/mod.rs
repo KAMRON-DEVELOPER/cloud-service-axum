@@ -9,20 +9,16 @@ use crate::utilities::app_state::AppState;
 
 use axum::{
     Router,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch},
 };
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/v1/projects", get(handlers::get_projects))
-        .route("/api/v1/project:project_id", get(handlers::get_project))
-        .route("/api/v1/project:project_id", post(handlers::create_project))
         .route(
-            "/api/v1/project:project_id",
-            patch(handlers::update_project),
+            "/api/v1/projects",
+            get(handlers::get_projects).post(handlers::create_project),
         )
-        .route(
-            "/api/v1/project:project_id",
-            delete(handlers::delete_project),
-        )
+        .route("/api/v1/project:id", get(handlers::get_project))
+        .route("/api/v1/project:id", patch(handlers::update_project))
+        .route("/api/v1/project:id", delete(handlers::delete_project))
 }
