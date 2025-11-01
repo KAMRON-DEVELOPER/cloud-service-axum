@@ -22,6 +22,15 @@ impl Amqp {
 
         let options = ConnectionProperties::default();
 
+        if config.client_cert.is_some() && config.client_key.is_some() {
+            let connection = Connection::connect(&uri, options).await?;
+            info!("✅ RabbitMQ connection established.");
+
+            return Ok(Self {
+                connection: Arc::new(connection),
+            });
+        }
+
         let mut tlsconfig = OwnedTLSConfig::default();
 
         if let (Some(ca), Some(client_cert), Some(client_key)) =

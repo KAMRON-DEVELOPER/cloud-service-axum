@@ -36,6 +36,8 @@ pub struct Config {
 
     // RABBITMQ
     pub amqp_url: Option<String>,
+    pub rabbitmq_default_user: Option<String>,
+    pub rabbitmq_default_pass: Option<String>,
 
     // KAFKA BROKERS
     pub kafka_brokers: Option<String>,
@@ -172,6 +174,20 @@ impl Config {
         let amqp_addr = get_config_value(
             "AMQP_ADDR",
             Some("AMQP_ADDR"),
+            None,
+            Some("amqp://127.0.0.1:5672".to_string()),
+        )
+        .await;
+        let rabbitmq_default_user = get_config_value(
+            "RABBITMQ_DEFAULT_USER",
+            Some("RABBITMQ_DEFAULT_USER"),
+            None,
+            Some("amqp://127.0.0.1:5672".to_string()),
+        )
+        .await;
+        let rabbitmq_default_pass = get_config_value(
+            "RABBITMQ_DEFAULT_PASS",
+            Some("RABBITMQ_DEFAULT_PASS"),
             None,
             Some("amqp://127.0.0.1:5672".to_string()),
         )
@@ -331,6 +347,8 @@ impl Config {
             redis_username,
             redis_password,
             amqp_url: amqp_addr,
+            rabbitmq_default_user,
+            rabbitmq_default_pass,
             kafka_brokers,
             gcp_project_id,
             gcs_bucket_name,
