@@ -13,13 +13,11 @@ pub struct Config {
     pub server_addres: String,
     pub frontend_endpoint: String,
 
-    // Encryption key for secrets (32-byte base64 encoded)
     pub encryption_key: String,
 
-    // Base domain for user deployments (e.g., "app.pinespot.uz")
     pub base_domain: String,
 
-    // Kubernetes config
+    // KUBERNETES
     pub k8s_config_path: Option<String>,
     pub k8s_in_cluster: bool,
 
@@ -88,18 +86,6 @@ pub struct Config {
 
 impl Config {
     pub async fn init() -> Self {
-        let encryption_key = std::env::var("ENCRYPTION_KEY")
-            .expect("ENCRYPTION_KEY must be set - generate with: openssl rand -base64 32");
-
-        let base_domain =
-            std::env::var("BASE_DOMAIN").unwrap_or_else(|_| "app.pinespot.uz".to_string());
-
-        let k8s_config_path = std::env::var("KUBECONFIG").ok();
-        let k8s_in_cluster = std::env::var("K8S_IN_CLUSTER")
-            .unwrap_or_else(|_| "false".to_string())
-            .parse()
-            .unwrap_or(false);
-
         let server_addres = get_config_value(
             "SERVER_ADDRES",
             Some("SERVER_ADDRES"),
@@ -117,6 +103,18 @@ impl Config {
         )
         .await
         .unwrap();
+
+        let encryption_key = std::env::var("ENCRYPTION_KEY")
+            .expect("ENCRYPTION_KEY must be set - generate with: openssl rand -base64 32");
+
+        let base_domain =
+            std::env::var("BASE_DOMAIN").unwrap_or_else(|_| "app.pinespot.uz".to_string());
+
+        let k8s_config_path = std::env::var("KUBECONFIG").expect("KUBECONFIG must be set");
+        let k8s_in_cluster = std::env::var("K8S_IN_CLUSTER")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse()
+            .unwrap_or(false);
 
         let base_dir = find_project_root().unwrap_or_else(|| PathBuf::from("."));
 
@@ -320,7 +318,7 @@ impl Config {
         Config {
             encryption_key,
             base_domain,
-            k8s_config_path,
+            k8s_config_path: Some(k8s_config_path),
             k8s_in_cluster,
             server_addres,
             frontend_endpoint,

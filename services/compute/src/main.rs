@@ -29,6 +29,8 @@ use crate::{services::build_kubernetes::Kubernetes, utilities::app_state::AppSta
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("**************************** 1 ****************************");
+
     match dotenvy::dotenv() {
         Ok(path) => {
             info!("Loaded .env file from {}", path.display());
@@ -41,7 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    println!("**************************** 2 ****************************");
+
     let config = Config::init().await;
+
+    println!("**************************** 3 ****************************");
 
     let filter = EnvFilter::new("pinespot_axum=debug,tower_http=warn,hyper=warn,reqwest=warn");
     let timer = LocalTime::new(format_description!(
@@ -79,6 +85,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: config.clone(),
         http_client,
     };
+
+    println!("**************************** 4 ****************************");
 
     let cors = CorsLayer::new()
         .allow_origin([
