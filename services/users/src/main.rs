@@ -72,19 +72,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
+    println!("**************************** 4 ****************************");
     let rustls_config = build_rustls_config(&config)?;
+    println!("**************************** 5 ****************************");
     let database = Database::new(&config).await?;
+    println!("**************************** 6 ****************************");
     let redis = Redis::new(&config).await?;
+    println!("**************************** 7 ****************************");
     let amqp = Amqp::new(&config).await?;
+    println!("**************************** 8 ****************************");
     let kafka = Kafka::new(&config, "")?;
+    println!("**************************** 9 ****************************");
     let key = Key::from(config.cookie_key.as_ref().unwrap().as_bytes());
+    println!("**************************** 10 ****************************");
     let google_oauth_client = build_google_oauth_client(&config)?;
+    println!("**************************** 11 ****************************");
     let github_oauth_client = build_github_oauth_client(&config)?;
+    println!("**************************** 12 ****************************");
     let http_client = reqwest::ClientBuilder::new()
         .redirect(reqwest::redirect::Policy::none())
         .build()?;
+    println!("**************************** 13 ****************************");
     let s3 = build_s3(&config)?;
+    println!("**************************** 14 ****************************");
     let gcs = build_gcs(&config)?;
+    println!("**************************** 15 ****************************");
 
     let app_state = AppState {
         rustls_config,
@@ -101,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         gcs,
     };
 
-    println!("**************************** 4 ****************************");
+    println!("**************************** 16 ****************************");
 
     let cors = CorsLayer::new()
         .allow_origin([
