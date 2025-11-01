@@ -16,7 +16,7 @@ pub struct Amqp {
 impl Amqp {
     pub async fn new(config: &Config) -> Result<Self, AppError> {
         let uri = config
-            .amqp_url
+            .amqp_addr
             .clone()
             .ok_or_else(|| AppError::MissingAmqpUrlError)?;
 
