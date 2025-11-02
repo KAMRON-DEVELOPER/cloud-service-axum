@@ -17,7 +17,7 @@ pub struct AppState {
     pub http_client: Client,
 }
 
-impl FromRef<AppState> for ClientConfig {
+impl FromRef<AppState> for Option<ClientConfig> {
     fn from_ref(state: &AppState) -> Self {
         state.rustls_config.clone()
     }

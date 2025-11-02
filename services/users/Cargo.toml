@@ -33,5 +33,4 @@ bcrypt = "0.17.1"
 cookie = "0.18.1"
 infer = "0.19.0"
 oauth2 = "5.0.0"
-regex = "1.11.2"
 object_store = { version = "0.12.4", features = ["gcp", "aws"] }
