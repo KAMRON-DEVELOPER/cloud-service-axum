@@ -41,10 +41,9 @@ pub struct Config {
     pub kafka_brokers: Option<String>,
 
     // GCP
-    pub gcp_project_id: Option<String>,
     pub gcs_bucket_name: Option<String>,
-    pub gcp_credentials: Option<String>,
-    pub gcp_credentials_path: Option<PathBuf>,
+    pub gcp_service_account: Option<String>,
+    pub gcp_service_account_path: Option<PathBuf>,
 
     pub google_oauth_client_id: Option<String>,
     pub google_oauth_client_secret: Option<String>,
@@ -185,15 +184,13 @@ impl Config {
         )
         .await;
 
-        let gcp_project_id =
-            get_config_value("GCP_PROJECT_ID", Some("GCP_PROJECT_ID"), None, None).await;
         let gcs_bucket_name =
             get_config_value("GCS_BUCKET_NAME", Some("GCS_BUCKET_NAME"), None, None).await;
-        let gcp_credentials_path = base_dir.join("certs/gcp-credentials.json");
-        let gcp_credentials = get_config_value(
-            "gcp-credentials.json",
-            Some("GCP_CREDENTIALS"),
-            Some(&gcp_credentials_path),
+        let gcp_service_account_path = base_dir.join("certs/service-account.json");
+        let gcp_service_account = get_config_value(
+            "service_account.json",
+            Some("SERVICE_ACCOUNT"),
+            Some(&gcp_service_account_path),
             None,
         )
         .await;
@@ -332,10 +329,9 @@ impl Config {
             redis_password,
             amqp_addr,
             kafka_brokers,
-            gcp_project_id,
             gcs_bucket_name,
-            gcp_credentials,
-            gcp_credentials_path: Some(gcp_credentials_path),
+            gcp_service_account,
+            gcp_service_account_path: Some(gcp_service_account_path),
             google_oauth_client_id,
             google_oauth_client_secret,
             google_oauth_redirect_url,

@@ -14,7 +14,7 @@ pub fn build_s3(config: &Config) -> Result<AmazonS3, AppError> {
 }
 
 pub fn build_gcs(config: &Config) -> Result<GoogleCloudStorage, AppError> {
-    if let Some(binding) = config.gcp_credentials_path.clone()
+    if let Some(binding) = config.gcp_service_account_path.clone()
         && binding.exists()
     {
         let service_account_path = binding.to_str().unwrap();
