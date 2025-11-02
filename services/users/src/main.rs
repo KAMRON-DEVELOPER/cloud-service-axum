@@ -172,10 +172,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tracing_layer)
         .with_state(app_state);
 
-    // Run Axum server
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8001));
-    info!("Server running on port {:#?}", addr);
-
     let listener = tokio::net::TcpListener::bind(config.server_addres)
         .await
         .unwrap();
@@ -186,6 +182,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown_signal())
     .await
     .unwrap();
+
+    info!("Server running on port {:#?}", config.server_addres);
 
     Ok(())
 }

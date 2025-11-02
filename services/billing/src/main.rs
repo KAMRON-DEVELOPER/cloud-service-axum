@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             HeaderValue::from_static("http://localhost:3000"),
             HeaderValue::from_static("http://127.0.0.1:5173"),
             HeaderValue::from_static("http://localhost:5173"),
-            HeaderValue::from_static("https://pinespot.uz"),
+            HeaderValue::from_static("https://kronk.uz"),
         ])
         .allow_methods([
             Method::GET,
@@ -129,10 +129,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tracing_layer)
         .with_state(app_state);
 
-    // Run Axum server
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8001));
-    info!("Server running on port {:#?}", addr);
-
     let listener = tokio::net::TcpListener::bind(config.server_addres)
         .await
         .unwrap();
@@ -143,6 +139,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown_signal())
     .await
     .unwrap();
+
+    info!("Server running on port {:#?}", config.server_addres);
 
     Ok(())
 }
