@@ -13,7 +13,7 @@ use axum::{
 use axum_extra::extract::cookie::Key;
 use shared::{
     services::{amqp::Amqp, database::Database, kafka::Kafka, redis::Redis},
-    utilities::{config::Config, tls::build_rustls_config},
+    utilities::config::Config,
 };
 use time::macros::format_description;
 use tokio::signal;
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     println!("**************************** 4 ****************************");
-    let rustls_config = build_rustls_config(&config)?;
+    // let rustls_config = build_rustls_config(&config)?;
     println!("**************************** 5 ****************************");
     let database = Database::new(&config).await?;
     println!("**************************** 6 ****************************");
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("**************************** 15 ****************************");
 
     let app_state = AppState {
-        rustls_config,
+        rustls_config: None,
         database,
         redis,
         amqp,

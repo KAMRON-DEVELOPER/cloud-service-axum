@@ -8,7 +8,7 @@ use shared::{
 
 #[derive(Clone)]
 pub struct AppState {
-    pub rustls_config: ClientConfig,
+    pub rustls_config: Option<ClientConfig>,
     pub database: Database,
     pub redis: Redis,
     pub amqp: Amqp,

@@ -11,7 +11,7 @@ use shared::{
 
 #[derive(Clone)]
 pub struct AppState {
-    pub rustls_config: ClientConfig,
+    pub rustls_config: Option<ClientConfig>,
     pub database: Database,
     pub redis: Redis,
     pub amqp: Amqp,
@@ -25,7 +25,7 @@ pub struct AppState {
     pub gcs: GoogleCloudStorage,
 }
 
-impl FromRef<AppState> for ClientConfig {
+impl FromRef<AppState> for Option<ClientConfig> {
     fn from_ref(state: &AppState) -> Self {
         state.rustls_config.clone()
     }
