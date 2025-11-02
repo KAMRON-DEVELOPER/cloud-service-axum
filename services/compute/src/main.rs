@@ -139,7 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tracing_layer)
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind(config.server_addres)
+    let listener = tokio::net::TcpListener::bind(config.clone().server_addres.clone())
         .await
         .unwrap();
     axum::serve(
