@@ -17,18 +17,18 @@ pub struct Kafka {
 impl Kafka {
     pub fn new(config: &Config, group_id: &str) -> Result<Self, AppError> {
         let mut common = ClientConfig::new();
-        common.set("bootstrap.servers", config.kafka_brokers.clone().unwrap());
+        common.set("bootstrap.servers", config.kafka_bootstrap_servers.clone());
 
-        // if let (Some(ca), Some(cert), Some(key)) =
-        //     (&config.ca, &config.client_cert, &config.client_key)
-        // {
-        //     info!("🔐 Kafka SSL/TLS enabled");
-        //     common
-        //         .set("security.protocol", "ssl")
-        //         .set("ssl.ca.pem", ca)
-        //         .set("ssl.certificate.pem", cert)
-        //         .set("ssl.key.pem", key);
-        // }
+        if let (Some(ca), Some(cert), Some(key)) =
+            (&config.ca, &config.client_cert, &config.client_key)
+        {
+            info!("🔐 Kafka SSL/TLS enabled");
+            common
+                .set("security.protocol", "ssl")
+                .set("ssl.ca.pem", ca)
+                .set("ssl.certificate.pem", cert)
+                .set("ssl.key.pem", key);
+        }
 
         let producer = common
             .clone()

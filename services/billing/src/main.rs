@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let config = Config::init().await;
+    let config = Config::init().await?;
 
     let filter = EnvFilter::new("pinespot_axum=debug,tower_http=warn,hyper=warn,reqwest=warn");
     let timer = LocalTime::new(format_description!(

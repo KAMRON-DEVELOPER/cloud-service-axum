@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("**************************** 2 ****************************");
 
-    let config = Config::init().await;
+    let config = Config::init().await?;
 
     println!("**************************** 3 ****************************");
 
@@ -89,7 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("**************************** 8 ****************************");
     let kafka = Kafka::new(&config, "users-service-group")?;
     println!("**************************** 9 ****************************");
-    let key = Key::from(config.cookie_key.as_ref().unwrap().as_bytes());
+    let key = Key::from(config.cookie_key.unwrap().as_bytes());
     println!("**************************** 10 ****************************");
     let google_oauth_client = build_google_oauth_client(&config)?;
     println!("**************************** 11 ****************************");

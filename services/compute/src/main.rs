@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("**************************** 2 ****************************");
 
-    let config = Config::init().await;
+    let config = Config::init().await?;
 
     println!("**************************** 3 ****************************");
 

@@ -86,10 +86,7 @@ impl ZeptoMail {
 
         debug!("Sending email to '{}' with email '{}'", name, to_email);
 
-        let api_key = config
-            .email_service_api_key
-            .clone()
-            .ok_or(AppError::MissingEmailServiceApiKeyError)?;
+        let api_key = config.email_service_api_key.clone();
 
         let res = self
             .client

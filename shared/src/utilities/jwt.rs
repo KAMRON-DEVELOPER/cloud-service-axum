@@ -36,10 +36,10 @@ pub fn create_token(config: &Config, user_id: Uuid, typ: TokenType) -> Result<St
 
     let exp = now
         + match typ {
-            TokenType::Access => Duration::minutes(config.access_token_expire_in_minute.unwrap()),
-            TokenType::Refresh => Duration::days(config.refresh_token_expire_in_days.unwrap()),
+            TokenType::Access => Duration::minutes(config.access_token_expire_in_minute),
+            TokenType::Refresh => Duration::days(config.refresh_token_expire_in_days),
             TokenType::EmailVerification => {
-                Duration::hours(config.email_verification_token_expire_in_hours.unwrap())
+                Duration::hours(config.email_verification_token_expire_in_hours)
             }
         };
 
@@ -50,7 +50,7 @@ pub fn create_token(config: &Config, user_id: Uuid, typ: TokenType) -> Result<St
         exp: exp.timestamp(),
     };
 
-    let encoding_key = EncodingKey::from_secret(config.secret_key.as_ref().unwrap().as_bytes());
+    let encoding_key = EncodingKey::from_secret(config.jwt_secret_key.as_bytes());
     let encoded_token = encode(&Header::new(Algorithm::HS256), &claims, &encoding_key)?;
     Ok(encoded_token)
 }
@@ -58,7 +58,7 @@ pub fn create_token(config: &Config, user_id: Uuid, typ: TokenType) -> Result<St
 pub fn verify_token(config: &Config, token: &str) -> Result<Claims, AppError> {
     let token_data = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(config.secret_key.as_ref().unwrap().as_bytes()),
+        &DecodingKey::from_secret(config.jwt_secret_key.as_bytes()),
         &Validation::default(),
     )?;
     Ok(token_data.claims)

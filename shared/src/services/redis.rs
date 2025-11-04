@@ -1,7 +1,7 @@
 use crate::utilities::{config::Config, errors::AppError};
 use redis::{
-    Client, ClientTlsConfig, ConnectionAddr, ConnectionInfo, RedisConnectionInfo, TlsCertificates,
-    aio::MultiplexedConnection,
+    Client, ClientTlsConfig, ConnectionAddr, ConnectionInfo, ProtocolVersion, RedisConnectionInfo,
+    TlsCertificates, aio::MultiplexedConnection,
 };
 use tracing::debug;
 
@@ -12,21 +12,11 @@ pub struct Redis {
 
 impl Redis {
     pub async fn new(config: &Config) -> Result<Self, AppError> {
-        let redis_url = config
-            .redis_url
-            .clone()
-            .ok_or(AppError::RedisUrlNotSetError)?;
-
-        if config.client_cert.is_some() && config.client_key.is_some() {
-            debug!("TLS certificates found — connecting WITHOUT TLS");
-
-            let client = Client::open(redis_url)?;
-            let connection = client.get_multiplexed_tokio_connection().await?;
-            return Ok(Self { connection });
-        }
+        let redis_url = config.redis_url.clone();
 
         if let Some(client_cert) = &config.client_cert
             && let Some(client_key) = &config.client_key
+            && let Some(ca) = &config.ca
         {
             // Structure to hold mTLS client certificate and key binaries in PEM format
             let client_tls = ClientTlsConfig {
@@ -39,19 +29,16 @@ impl Redis {
             // * root_cert: binary CA certificate in PEM format if CA is not in local truststore
             let tls_certs = TlsCertificates {
                 client_tls: Some(client_tls),
-                root_cert: None,
+                root_cert: Some(ca.as_bytes().to_vec()),
             };
 
             let _conn_info = ConnectionInfo {
-                addr: ConnectionAddr::Tcp(
-                    config.redis_host.clone().unwrap(),
-                    config.redis_port.unwrap(),
-                ),
+                addr: ConnectionAddr::Tcp(config.redis_host.clone(), config.redis_port),
                 redis: RedisConnectionInfo {
                     db: 0,
                     username: config.redis_username.clone(),
                     password: config.redis_password.clone(),
-                    ..Default::default()
+                    protocol: ProtocolVersion::RESP3,
                 },
             };
 

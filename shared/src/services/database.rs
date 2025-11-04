@@ -14,14 +14,10 @@ impl Database {
     pub async fn new(config: &Config) -> Result<Self, AppError> {
         let mut options: PgConnectOptions = config
             .database_url
-            .as_ref()
-            .unwrap()
             .parse()
-            .map_err(|_| AppError::DatabaseParsingError)?;
+            .map_err(|_| AppError::DatabaseUrlParsingError)?;
 
-        if let Some(ssl_mode) = config.ssl_mode {
-            options = options.ssl_mode(ssl_mode);
-        }
+        options = options.ssl_mode(config.pg_ssl_mode);
 
         // if let Some(ca_path) = &config.ca_path {
         //     if ca_path.exists() {

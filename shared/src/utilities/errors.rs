@@ -4,11 +4,13 @@ use serde_json::json;
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("{0}")]
+    FileReadError(String),
+    #[error("{0}")]
     JwtError(String),
-    #[error("Database url not set error")]
-    DatabaseUrlNotSetError,
+    #[error("{0} environment variable not set error")]
+    EnvironmentVariableNotSetError(String),
     #[error("Database url parsing error")]
-    DatabaseParsingError,
+    DatabaseUrlParsingError,
     #[error("Database connection error")]
     DatabaseConnectionError,
     #[error("Failed to fetch {resource} with ID {id}")]
@@ -186,6 +188,7 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
+            Self::FileReadError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::IoError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::SerdejsonError(e) => (StatusCode::UNPROCESSABLE_ENTITY, e.to_string()),
             Self::InvalidPemError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
@@ -215,11 +218,11 @@ impl IntoResponse for AppError {
                 format!(" Incompatible client key type error, {}", e),
             ),
             Self::JwtError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
-            Self::DatabaseUrlNotSetError => (
+            Self::EnvironmentVariableNotSetError(field) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Database url not set error".to_string(),
+                format!("{field} environment variable not set error"),
             ),
-            Self::DatabaseParsingError => (
+            Self::DatabaseUrlParsingError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database url parsing error".to_string(),
             ),

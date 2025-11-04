@@ -15,22 +15,8 @@ pub struct Amqp {
 
 impl Amqp {
     pub async fn new(config: &Config) -> Result<Self, AppError> {
-        let uri = config
-            .amqp_addr
-            .clone()
-            .ok_or_else(|| AppError::MissingAmqpUrlError)?;
-
+        let uri = config.amqp_addr.clone();
         let options = ConnectionProperties::default();
-
-        if config.client_cert.is_some() && config.client_key.is_some() {
-            let connection = Connection::connect(&uri, options).await?;
-            info!("✅ RabbitMQ connection established.");
-
-            return Ok(Self {
-                connection: Arc::new(connection),
-            });
-        }
-
         let mut tlsconfig = OwnedTLSConfig::default();
 
         if let (Some(ca), Some(client_cert), Some(client_key)) =

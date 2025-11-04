@@ -207,7 +207,7 @@ pub async fn create_deployment(
     let deployment = DeploymentService::create(
         &database.pool,
         &kubernetes.client,
-        &config.encryption_key,
+        &config.k8s_encryption_key,
         user_id,
         project_id,
         &config.base_domain,
