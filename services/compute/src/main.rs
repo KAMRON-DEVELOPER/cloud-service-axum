@@ -29,6 +29,10 @@ use crate::{services::build_kubernetes::Kubernetes, utilities::app_state::AppSta
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     match dotenvy::dotenv() {
         Ok(path) => {
             info!("Loaded .env file from {}", path.display());
