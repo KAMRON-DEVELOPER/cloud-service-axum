@@ -21,7 +21,7 @@ use tower_http::{
     cors::CorsLayer,
     trace::{DefaultOnResponse, TraceLayer},
 };
-use tracing::{debug, error, info, warn};
+use tracing::info;
 use tracing_subscriber::{
     EnvFilter, fmt::time::LocalTime, layer::SubscriberExt, util::SubscriberInitExt,
 };
@@ -36,13 +36,9 @@ use crate::{
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("**************************** 0 ****************************");
-
     rustls::crypto::ring::default_provider()
         .install_default()
         .expect("Failed to install rustls crypto provider");
-
-    println!("**************************** 1 ****************************");
 
     match dotenvy::dotenv() {
         Ok(path) => {
@@ -56,13 +52,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("**************************** 2 ****************************");
-
     let config = Config::init().await?;
 
-    println!("**************************** 3 ****************************");
-
-    let filter = EnvFilter::new("pinespot_axum=debug,tower_http=warn,hyper=warn,reqwest=warn");
+    let filter = EnvFilter::new("users=debug,tower_http=warn,hyper=warn,reqwest=warn");
     let timer = LocalTime::new(format_description!(
         "[year]-[month]-[day] [hour]:[minute]:[second]"
     ));
@@ -78,31 +70,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
-    println!("**************************** 4 ****************************");
     // let rustls_config = build_rustls_config(&config)?;
-    println!("**************************** 5 ****************************");
     let database = Database::new(&config).await?;
-    println!("**************************** 6 ****************************");
     let redis = Redis::new(&config).await?;
-    println!("**************************** 7 ****************************");
     let amqp = Amqp::new(&config).await?;
-    println!("**************************** 8 ****************************");
     let kafka = Kafka::new(&config, "users-service-group")?;
-    println!("**************************** 9 ****************************");
     let key = Key::from(config.cookie_key.as_bytes());
-    println!("**************************** 10 ****************************");
     let google_oauth_client = build_google_oauth_client(&config)?;
-    println!("**************************** 11 ****************************");
     let github_oauth_client = build_github_oauth_client(&config)?;
-    println!("**************************** 12 ****************************");
     let http_client = reqwest::ClientBuilder::new()
         .redirect(reqwest::redirect::Policy::none())
         .build()?;
-    println!("**************************** 13 ****************************");
     let s3 = build_s3(&config)?;
-    println!("**************************** 14 ****************************");
     let gcs = build_gcs(&config)?;
-    println!("**************************** 15 ****************************");
 
     let app_state = AppState {
         rustls_config: None,
@@ -118,8 +98,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         s3,
         gcs,
     };
-
-    println!("**************************** 16 ****************************");
 
     let cors = CorsLayer::new()
         .allow_origin([
@@ -146,8 +124,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             HeaderName::from_static("x-requested-with"),
         ]);
 
-    println!("**************************** 17 ****************************");
-
     let tracing_layer = TraceLayer::new_for_http()
         .on_request(|request: &http::Request<_>, _span: &tracing::Span| {
             let method = request.method();
@@ -166,8 +142,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
-    println!("**************************** 18 ****************************");
-
     let app = axum::Router::new()
         .merge(features::routes())
         .fallback(not_found_handler)
@@ -176,12 +150,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tracing_layer)
         .with_state(app_state);
 
-    println!("**************************** 19 ****************************");
-
-    error!("Server running on port {:#?}", config.server_addres);
-    warn!("Server running on port {:#?}", config.server_addres);
-    debug!("Server running on port {:#?}", config.server_addres);
-    debug!("Server running on port {:#?}", config.server_addres);
     info!("Server running on port {:#?}", config.server_addres);
     let listener = tokio::net::TcpListener::bind(config.clone().server_addres.clone())
         .await
@@ -193,8 +161,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown_signal())
     .await
     .unwrap();
-
-    println!("**************************** 20 ****************************");
 
     Ok(())
 }
