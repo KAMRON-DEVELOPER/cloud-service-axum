@@ -21,7 +21,7 @@ use tower_http::{
     cors::CorsLayer,
     trace::{DefaultOnResponse, TraceLayer},
 };
-use tracing::info;
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::{
     EnvFilter, fmt::time::LocalTime, layer::SubscriberExt, util::SubscriberInitExt,
 };
@@ -146,6 +146,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             HeaderName::from_static("x-requested-with"),
         ]);
 
+    println!("**************************** 17 ****************************");
+
     let tracing_layer = TraceLayer::new_for_http()
         .on_request(|request: &http::Request<_>, _span: &tracing::Span| {
             let method = request.method();
@@ -164,6 +166,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
+    println!("**************************** 18 ****************************");
+
     let app = axum::Router::new()
         .merge(features::routes())
         .fallback(not_found_handler)
@@ -172,6 +176,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tracing_layer)
         .with_state(app_state);
 
+    println!("**************************** 19 ****************************");
+
+    error!("Server running on port {:#?}", config.server_addres);
+    warn!("Server running on port {:#?}", config.server_addres);
+    debug!("Server running on port {:#?}", config.server_addres);
+    debug!("Server running on port {:#?}", config.server_addres);
     info!("Server running on port {:#?}", config.server_addres);
     let listener = tokio::net::TcpListener::bind(config.clone().server_addres.clone())
         .await
@@ -183,6 +193,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown_signal())
     .await
     .unwrap();
+
+    println!("**************************** 20 ****************************");
 
     Ok(())
 }
