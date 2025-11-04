@@ -22,7 +22,7 @@ pub struct OAuthCallback {
 }
 
 #[derive(Serialize, Debug)]
-pub struct AuthResponse {
+pub struct AuthOut {
     pub user: User,
     pub tokens: Tokens,
 }
@@ -35,7 +35,13 @@ pub struct Tokens {
 }
 
 #[derive(Deserialize, Validate, Debug)]
-pub struct ContinueWithEmailSchema {
+pub struct AuthIn {
+    #[validate(length(
+        min = 8,
+        max = 24,
+        message = "Username should be long between 8 and 24"
+    ))]
+    pub username: Option<String>,
     #[validate(email(message = "Invalid email address"))]
     pub email: String,
     #[validate(length(
@@ -72,7 +78,7 @@ pub struct GithubOAuthUser {
 
 #[derive(Deserialize, Default, Debug)]
 #[serde(default, rename_all = "camelCase")]
-pub struct OAuthUserSchema {
+pub struct UserIn {
     pub username: Option<String>,
     pub email: Option<String>,
     pub password: Option<String>,

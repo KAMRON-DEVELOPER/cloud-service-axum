@@ -8,7 +8,7 @@ use uuid::Uuid;
 // ============================================
 
 #[derive(Type, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
-#[sqlx(type_name = "user_role", rename_all = "lowercase")]
+#[sqlx(type_name = "user_role", rename_all = "snake_case")]
 pub enum UserRole {
     Admin,
     #[default]
@@ -16,7 +16,7 @@ pub enum UserRole {
 }
 
 #[derive(Type, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
-#[sqlx(type_name = "user_status", rename_all = "lowercase")]
+#[sqlx(type_name = "user_status", rename_all = "snake_case")]
 pub enum UserStatus {
     Active,
     Suspended,
@@ -25,7 +25,7 @@ pub enum UserStatus {
 }
 
 #[derive(Type, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[sqlx(type_name = "provider", rename_all = "lowercase")]
+#[sqlx(type_name = "provider", rename_all = "snake_case")]
 pub enum Provider {
     Google,
     Github,

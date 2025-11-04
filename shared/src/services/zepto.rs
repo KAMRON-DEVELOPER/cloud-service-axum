@@ -1,6 +1,6 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::utilities::{config::Config, errors::AppError};
 
@@ -60,18 +60,18 @@ impl ZeptoMail {
         }
     }
 
-    pub async fn send_verification_link_email(
+    pub async fn send_email_verification_link(
         &self,
         to_email: String,
         name: String,
-        verification_link: String,
+        link: String,
         config: &Config,
     ) -> Result<(), AppError> {
         let payload = Payload {
-            template_alias: "pinespot-email-verification-link-key-alias".to_string(),
+            template_alias: "poddle-email-verification-link-key-alias".to_string(),
             from: EmailAddress {
-                name: "PineSpot Verification".to_string(),
-                address: "verification@kronk.uz".to_string(),
+                name: "Poddle Verification".to_string(),
+                address: "verification@poddle.uz".to_string(),
             },
             to: vec![Recipient {
                 email_address: EmailAddress {
@@ -80,7 +80,7 @@ impl ZeptoMail {
                 },
             }],
             merge_info: serde_json::json!({
-                "verification_link": verification_link
+                "link": link
             }),
         };
 
@@ -107,7 +107,7 @@ impl ZeptoMail {
         })?;
 
         if status.is_success() {
-            tracing::info!("ZeptoMail success: {:?}", body);
+            info!("ZeptoMail success: {:?}", body);
             Ok(())
         } else {
             Err(AppError::ExternalServiceError(format!(

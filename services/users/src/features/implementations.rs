@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::features::{
     models::{OAuthUser, Provider, User, UserRole, UserStatus},
-    schemas::{ContinueWithEmailSchema, GithubOAuthUser, GoogleOAuthUser},
+    schemas::{AuthIn, GithubOAuthUser, GoogleOAuthUser},
 };
 
 impl From<GoogleOAuthUser> for OAuthUser {
@@ -37,7 +37,7 @@ impl From<GithubOAuthUser> for OAuthUser {
     }
 }
 
-impl ContinueWithEmailSchema {
+impl AuthIn {
     pub async fn verify(&self, database: &Database) -> Result<Option<User>, AppError> {
         self.validate()?;
 

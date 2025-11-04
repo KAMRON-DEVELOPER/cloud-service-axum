@@ -60,4 +60,11 @@ impl Redis {
 
         Ok(Self { connection })
     }
+
+    // pub async fn set_user(&self) {
+    //     let mut user_data = BTreeMap::new();
+    //     user_data.insert("city", "New York");
+    //     user_data.insert("occupation", "Engineer");
+    //     self.connection.hset_multiple("user:2", &user_data).await?;
+    // }
 }

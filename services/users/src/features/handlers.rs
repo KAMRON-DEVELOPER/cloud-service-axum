@@ -3,12 +3,12 @@ use crate::{
         models::{OAuthUser, Provider, User, UserRole, UserStatus},
         repository::create_session,
         schemas::{
-            AuthResponse, ContinueWithEmailSchema, GithubOAuthUser, GoogleOAuthUser, OAuthCallback,
-            OAuthUserSchema, RedirectResponse, Tokens, VerifyQuery,
+            AuthIn, AuthOut, GithubOAuthUser, GoogleOAuthUser, OAuthCallback, RedirectResponse,
+            Tokens, UserIn, VerifyQuery,
         },
     },
     services::build_oauth::{GithubOAuthClient, GoogleOAuthClient},
-    utilities::{cookie::OptionalOAuthUserIdCookie, generators::generate_username},
+    utilities::cookie::OptionalOAuthUserIdCookie,
 };
 use bcrypt::{DEFAULT_COST, hash};
 use serde_json::{Value, json};
@@ -270,14 +270,11 @@ pub async fn continue_with_email_handler(
     State(config): State<Config>,
     TypedHeader(user_agent): TypedHeader<UserAgent>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    Json(continue_with_email_schema): Json<ContinueWithEmailSchema>,
+    Json(auth_in): Json<AuthIn>,
 ) -> Result<Response, AppError> {
-    debug!(
-        "continue_with_email_schema is {:#?}",
-        continue_with_email_schema
-    );
+    debug!("continue_with_email_schema is {:#?}", auth_in);
 
-    let maybe_user = continue_with_email_schema.verify(&database).await?;
+    let maybe_user = auth_in.verify(&database).await?;
 
     debug!("maybe_user is {:#?}", maybe_user);
 
@@ -308,27 +305,35 @@ pub async fn continue_with_email_handler(
         )
         .await?;
 
-        let response = Json(AuthResponse { user, tokens });
+        let response = Json(AuthOut { user, tokens });
         return Ok((jar, response).into_response());
     }
+
+    if auth_in.username.is_none() {
+        return Ok((jar, Json(json!({"message": "new_user"}))).into_response());
+    }
+
+    let mut tx = database.pool.begin().await?;
+
+    let username = auth_in.username.clone().unwrap_or_default();
 
     let email_oauth_user_id_str = Uuid::new_v4().to_string();
     let email_oauth_user_id = sqlx::query_scalar!(
         r#"
-            INSERT INTO oauth_users (id, provider, email, password)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO oauth_users (id, provider, username, email, password)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id
         "#,
         email_oauth_user_id_str,
         Provider::Email as Provider,
-        continue_with_email_schema.email,
-        continue_with_email_schema.password,
+        auth_in.username,
+        auth_in.email,
+        auth_in.password,
     )
-    .fetch_one(&database.pool)
+    .fetch_one(&mut *tx)
     .await?;
 
-    let username = generate_username();
-    let hash_password = hash(continue_with_email_schema.password, DEFAULT_COST)?;
+    let hash_password = hash(auth_in.password, DEFAULT_COST)?;
     let user = sqlx::query_as!(
         User,
         r#"
@@ -348,38 +353,64 @@ pub async fn continue_with_email_handler(
             updated_at
         "#,
         username,
-        continue_with_email_schema.email,
+        auth_in.email,
         hash_password,
         email_oauth_user_id
     )
-    .fetch_one(&database.pool)
+    .fetch_one(&mut *tx)
     .await?;
 
     let token = create_token(&config, user.id, TokenType::EmailVerification)?;
     let verification_link = format!("{}/auth/verify?token={}", config.frontend_endpoint, token);
 
     let zepto = ZeptoMail::new();
-    zepto
-        .send_verification_link_email(
+
+    match zepto
+        .send_email_verification_link(
             user.email.clone(),
-            format!("{}", user.username),
+            user.username.clone(),
             verification_link,
             &config,
         )
-        .await?;
+        .await
+    {
+        Ok(_) => {
+            tx.commit().await?;
+            let new_access = create_token(&config, user.id, TokenType::Access)?;
+            let new_refresh = create_token(&config, user.id, TokenType::Refresh)?;
 
-    let email_oauth_user_sub_cookie = Cookie::build(("email_oauth_user_id", email_oauth_user_id))
-        .http_only(true)
-        .path("/")
-        .same_site(SameSite::Lax)
-        .max_age(CookieDuration::days(365))
-        .secure(config.cookie_secure);
-    let jar = jar.add(email_oauth_user_sub_cookie);
+            let max_age_days = config.refresh_token_expire_in_days;
+            let refresh_cookie = Cookie::build(("refresh_token", new_refresh.clone()))
+                .http_only(true)
+                .path("/")
+                .same_site(SameSite::Lax)
+                .max_age(CookieDuration::days(max_age_days))
+                .secure(config.cookie_secure);
+            let jar = jar.add(refresh_cookie);
 
-    let response = Json(RedirectResponse {
-        redirect_to: "complete-profile".to_string(),
-    });
-    Ok((jar, response).into_response())
+            let tokens = Tokens {
+                access_token: new_access,
+                refresh_token: Some(new_refresh.clone()),
+            };
+
+            create_session(
+                &database.pool,
+                &user.id,
+                &user_agent.to_string(),
+                &addr.ip().to_string(),
+                &new_refresh,
+            )
+            .await?;
+
+            // 8. Return the new user and tokens
+            let response = Json(AuthOut { user, tokens });
+            Ok((jar, response).into_response())
+        }
+        Err(email_error) => {
+            tx.rollback().await?;
+            Err(email_error)
+        }
+    }
 }
 
 // -- =====================
@@ -398,7 +429,7 @@ pub async fn verify_handler(
     }
 
     let query_result = sqlx::query!(
-        "UPDATE users SET email_verified = TRUE WHERE id = $1",
+        "UPDATE users SET email_verified = TRUE, status = 'active' WHERE id = $1",
         verification_token_claims.sub
     )
     .execute(&database.pool)
@@ -454,7 +485,7 @@ pub async fn update_user_handler(
     State(gcs): State<GoogleCloudStorage>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    let mut oauth_user_schema = OAuthUserSchema {
+    let mut oauth_user_schema = UserIn {
         username: None,
         email: None,
         password: None,
@@ -592,7 +623,10 @@ pub async fn logout_handler(jar: PrivateCookieJar) -> impl IntoResponse {
         .collect();
 
     for (name, value, http_only, path, same_site, secure) in cookies {
-        debug!("Removing cookie: {}", name);
+        debug!(
+            "Removing cookie: {}, value: {}  http_only: {}  path: {:?}  same_site: {:?}  secure: {}",
+            name, value, http_only, path, same_site, secure
+        );
 
         let mut removal = Cookie::build((name, value))
             .http_only(http_only)
