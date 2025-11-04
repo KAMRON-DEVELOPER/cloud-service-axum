@@ -47,13 +47,13 @@ pub struct Config {
     pub gcp_service_account: Option<String>,
     pub gcp_service_account_path: Option<PathBuf>,
 
-    pub google_oauth_client_id: Option<String>,
-    pub google_oauth_client_secret: Option<String>,
-    pub google_oauth_redirect_url: Option<String>,
+    pub google_oauth_client_id: String,
+    pub google_oauth_client_secret: String,
+    pub google_oauth_redirect_url: String,
 
-    pub github_oauth_client_id: Option<String>,
-    pub github_oauth_client_secret: Option<String>,
-    pub github_oauth_redirect_url: Option<String>,
+    pub github_oauth_client_id: String,
+    pub github_oauth_client_secret: String,
+    pub github_oauth_redirect_url: String,
 
     pub cookie_key: String,
 
@@ -90,13 +90,9 @@ impl Config {
             .expect("K8S_ENCRYPTION_KEY must be set - generate with: openssl rand -base64 32");
 
         let k8s_config_path =
-            get_config_value("K8S_KUBECONFIG", Some("K8S_KUBECONFIG"), None, None).await?;
+            get_optional_config_value("K8S_KUBECONFIG", Some("K8S_KUBECONFIG"), None).await?;
         let k8s_in_cluster =
-            get_config_value("K8S_IN_CLUSTER", Some("K8S_IN_CLUSTER"), None, Some(false))
-                .await?
-                .ok_or_else(|| {
-                    AppError::EnvironmentVariableNotSetError("K8S_IN_CLUSTER".to_string())
-                })?;
+            get_config_value("K8S_IN_CLUSTER", Some("K8S_IN_CLUSTER"), None, Some(false)).await?;
 
         let base_domain =
             std::env::var("BASE_DOMAIN").unwrap_or_else(|_| "app.pinespot.uz".to_string());
@@ -107,8 +103,7 @@ impl Config {
             None,
             Some("0.0.0.0:8001".to_string()),
         )
-        .await?
-        .unwrap();
+        .await?;
 
         let frontend_endpoint = get_config_value(
             "FRONTEND_ENDPOINT",
@@ -116,14 +111,11 @@ impl Config {
             None,
             Some("http://localhost:5173".to_string()),
         )
-        .await?
-        .unwrap();
+        .await?;
 
         let base_dir = find_project_root().unwrap_or_else(|| PathBuf::from("."));
 
-        let debug = get_config_value("DEBUG", Some("DEBUG"), None, Some(false))
-            .await?
-            .unwrap();
+        let debug = get_config_value("DEBUG", Some("DEBUG"), None, Some(false)).await?;
 
         let tracing_level = get_config_value(
             "TRACING_LEVEL",
@@ -131,8 +123,7 @@ impl Config {
             None,
             Some(Level::DEBUG),
         )
-        .await?
-        .unwrap();
+        .await?;
 
         let database_url = get_config_value(
             "DATABASE_URL",
@@ -140,8 +131,7 @@ impl Config {
             None,
             Some("postgresql://postgres:password@localhost:5432/pinespot_db".to_string()),
         )
-        .await?
-        .ok_or_else(|| AppError::EnvironmentVariableNotSetError("DATABASE_URL".to_string()))?;
+        .await?;
 
         let redis_url = get_config_value(
             "REDIS_URL",
@@ -149,23 +139,19 @@ impl Config {
             None,
             Some("redis://localhost:6379/0".to_string()),
         )
-        .await?
-        .ok_or_else(|| AppError::EnvironmentVariableNotSetError("REDIS_URL".to_string()))?;
+        .await?;
         let redis_host = get_config_value(
             "REDIS_HOST",
             Some("REDIS_HOST"),
             None,
             Some("localhost".to_string()),
         )
-        .await?
-        .ok_or_else(|| AppError::EnvironmentVariableNotSetError("REDIS_HOST".to_string()))?;
-        let redis_port = get_config_value("REDIS_PORT", None, None, Some(6379))
-            .await?
-            .ok_or_else(|| AppError::EnvironmentVariableNotSetError("REDIS_PORT".to_string()))?;
+        .await?;
+        let redis_port = get_config_value("REDIS_PORT", None, None, Some(6379)).await?;
         let redis_username =
-            get_config_value("REDIS_USERNAME", Some("REDIS_USERNAME"), None, None).await?;
+            get_optional_config_value("REDIS_USERNAME", Some("REDIS_USERNAME"), None).await?;
         let redis_password =
-            get_config_value("REDIS_PASSWORD", Some("REDIS_PASSWORD"), None, None).await?;
+            get_optional_config_value("REDIS_PASSWORD", Some("REDIS_PASSWORD"), None).await?;
 
         let amqp_addr = get_config_value(
             "AMQP_ADDR",
@@ -173,8 +159,7 @@ impl Config {
             None,
             Some("amqp://localhost:5672".to_string()),
         )
-        .await?
-        .ok_or_else(|| AppError::EnvironmentVariableNotSetError("AMQP_ADDR".to_string()))?;
+        .await?;
 
         let kafka_bootstrap_servers = get_config_value(
             "KAFKA_BOOTSTRAP_SERVERS",
@@ -182,19 +167,15 @@ impl Config {
             None,
             Some("localhost:9092".to_string()),
         )
-        .await?
-        .ok_or_else(|| {
-            AppError::EnvironmentVariableNotSetError("KAFKA_BOOTSTRAP_SERVERS".to_string())
-        })?;
+        .await?;
 
         let gcs_bucket_name =
-            get_config_value("GCS_BUCKET_NAME", Some("GCS_BUCKET_NAME"), None, None).await?;
+            get_optional_config_value("GCS_BUCKET_NAME", Some("GCS_BUCKET_NAME"), None).await?;
         let gcp_service_account_path = base_dir.join("certs/service-account.json");
-        let gcp_service_account = get_config_value(
+        let gcp_service_account = get_optional_config_value(
             "service_account.json",
             Some("SERVICE_ACCOUNT"),
             Some(&gcp_service_account_path),
-            None,
         )
         .await?;
 
@@ -242,73 +223,48 @@ impl Config {
         )
         .await?;
 
-        let cookie_key = get_config_value("KEY", Some("KEY"), None, None)
-            .await?
-            .ok_or_else(|| AppError::EnvironmentVariableNotSetError("COOKIE_KEY".to_string()))?;
+        let cookie_key = get_config_value("KEY", Some("KEY"), None, None).await?;
 
         let s3_access_key_id =
-            get_config_value("S3_ACCESS_KEY_ID", Some("S3_ACCESS_KEY_ID"), None, None).await?;
+            get_optional_config_value("S3_ACCESS_KEY_ID", Some("S3_ACCESS_KEY_ID"), None).await?;
         let s3_secret_key =
-            get_config_value("S3_SECRET_KEY", Some("S3_SECRET_KEY"), None, None).await?;
-        let s3_endpoint = get_config_value("S3_ENDPOINT", Some("S3_ENDPOINT"), None, None).await?;
-        let s3_region = get_config_value("S3_REGION", Some("S3_REGION"), None, None).await?;
+            get_optional_config_value("S3_SECRET_KEY", Some("S3_SECRET_KEY"), None).await?;
+        let s3_endpoint =
+            get_optional_config_value("S3_ENDPOINT", Some("S3_ENDPOINT"), None).await?;
+        let s3_region = get_optional_config_value("S3_REGION", Some("S3_REGION"), None).await?;
         let s3_bucket_name =
-            get_config_value("S3_BUCKET_NAME", Some("S3_BUCKET_NAME"), None, None).await?;
-        let jwt_secret_key = get_config_value("SECRET_KEY", Some("SECRET_KEY"), None, None)
-            .await?
-            .ok_or_else(|| {
-                AppError::EnvironmentVariableNotSetError("JWT_SECRET_KEY".to_string())
-            })?;
+            get_optional_config_value("S3_BUCKET_NAME", Some("S3_BUCKET_NAME"), None).await?;
+        let jwt_secret_key = get_config_value("SECRET_KEY", Some("SECRET_KEY"), None, None).await?;
         let access_token_expire_in_minute = get_config_value(
             "ACCESS_TOKEN_EXPIRE_IN_MINUTE",
             Some("ACCESS_TOKEN_EXPIRE_IN_MINUTE"),
             None,
-            Some(15),
+            None,
         )
-        .await?
-        .ok_or_else(|| {
-            AppError::EnvironmentVariableNotSetError("ACCESS_TOKEN_EXPIRE_IN_MINUTE".to_string())
-        })?;
+        .await?;
         let refresh_token_expire_in_days = get_config_value(
             "REFRESH_TOKEN_EXPIRE_IN_DAYS",
             Some("REFRESH_TOKEN_EXPIRE_IN_DAYS"),
             None,
-            Some(90),
+            None,
         )
-        .await?
-        .ok_or_else(|| {
-            AppError::EnvironmentVariableNotSetError("REFRESH_TOKEN_EXPIRE_IN_DAYS".to_string())
-        })?;
+        .await?;
         let email_verification_token_expire_in_hours = get_config_value(
             "EMAIL_VERIFICATION_TOKEN_EXPIRE_IN_HOURS",
             Some("EMAIL_VERIFICATION_TOKEN_EXPIRE_IN_HOURS"),
             None,
-            Some(24),
+            None,
         )
-        .await?
-        .ok_or_else(|| {
-            AppError::EnvironmentVariableNotSetError(
-                "EMAIL_VERIFICATION_TOKEN_EXPIRE_IN_HOURS".to_string(),
-            )
-        })?;
+        .await?;
         let refresh_token_renewal_threshold_days = get_config_value(
             "REFRESH_TOKEN_RENEWAL_THRESHOLD_DAYS",
             Some("REFRESH_TOKEN_RENEWAL_THRESHOLD_DAYS"),
             None,
-            Some(7),
+            None,
         )
-        .await?
-        .ok_or_else(|| {
-            AppError::EnvironmentVariableNotSetError(
-                "REFRESH_TOKEN_RENEWAL_THRESHOLD_DAYS".to_string(),
-            )
-        })?;
+        .await?;
         let cookie_secure =
-            get_config_value("COOKIE_SECURE", Some("COOKIE_SECURE"), None, Some(false))
-                .await?
-                .ok_or_else(|| {
-                    AppError::EnvironmentVariableNotSetError("COOKIE_SECURE".to_string())
-                })?;
+            get_config_value("COOKIE_SECURE", Some("COOKIE_SECURE"), None, None).await?;
 
         let email_service_api_key = get_config_value(
             "EMAIL_SERVICE_API_KEY",
@@ -316,37 +272,25 @@ impl Config {
             None,
             None,
         )
-        .await?
-        .ok_or_else(|| {
-            AppError::EnvironmentVariableNotSetError("EMAIL_SERVICE_API_KEY".to_string())
-        })?;
+        .await?;
 
         // TLS certs: Docker secrets → fallback path
         let ca_path = base_dir.join("certs/ca/ca.pem");
-        let ca = get_config_value("ca.pem", Some("CA"), Some(&ca_path), None).await?;
+        let ca = get_optional_config_value("ca.pem", Some("CA"), Some(&ca_path)).await?;
         let client_cert_path = base_dir.join("certs/client/client-cert.pem");
-        let client_cert = get_config_value(
+        let client_cert = get_optional_config_value(
             "client-cert.pem",
             Some("CLIENT_CERT"),
             Some(&client_cert_path),
-            None,
         )
         .await?;
         let client_key_path = base_dir.join("certs/client/client-key.pem");
-        let client_key = get_config_value(
-            "client-key.pem",
-            Some("CLIENT_KEY"),
-            Some(&client_key_path),
-            None,
-        )
-        .await?;
+        let client_key =
+            get_optional_config_value("client-key.pem", Some("CLIENT_KEY"), Some(&client_key_path))
+                .await?;
 
         let pg_ssl_mode =
-            get_config_value("ssl_mode", Some("SSL_MODE"), None, Some(PgSslMode::Disable))
-                .await?
-                .ok_or_else(|| {
-                    AppError::EnvironmentVariableNotSetError("PG_SSL_MODE".to_string())
-                })?;
+            get_config_value("ssl_mode", Some("SSL_MODE"), None, Some(PgSslMode::Disable)).await?;
 
         let config = Config {
             k8s_in_cluster,
@@ -412,67 +356,63 @@ fn find_project_root() -> Option<PathBuf> {
     }
 }
 
-/// Try to resolve config value from Docker secrets, file path, or env var.
-/// - `secret_name` → filename inside `/run/secrets/`
-/// - `env_name` → optional environment variable key
-/// - `fallback_path` → fallback file path (checked if exists)
-///
-/// Returns parsed `T` if found and successfully parsed.
+pub async fn get_optional_config_value<T>(
+    secret_name: &str,
+    env_name: Option<&str>,
+    fallback_path: Option<&PathBuf>,
+) -> Result<Option<T>, AppError>
+where
+    T: FromStr,
+{
+    // Docker secret
+    let docker_secret = Path::new("/run/secrets").join(secret_name);
+    if docker_secret.exists() {
+        if let Ok(content) = fs::read_to_string(&docker_secret).await {
+            if let Ok(parsed) = T::from_str(content.trim()) {
+                return Ok(Some(parsed));
+            }
+        }
+    }
+
+    // Env var
+    if let Some(env_key) = env_name
+        && let Ok(val) = std::env::var(env_key)
+    {
+        if let Ok(parsed) = T::from_str(val.trim()) {
+            return Ok(Some(parsed));
+        }
+    }
+
+    // Fallback path
+    if let Some(path) = fallback_path
+        && path.exists()
+    {
+        if let Ok(content) = fs::read_to_string(path).await {
+            if let Ok(parsed) = T::from_str(content.trim()) {
+                return Ok(Some(parsed));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 pub async fn get_config_value<T>(
     secret_name: &str,
     env_name: Option<&str>,
     fallback_path: Option<&PathBuf>,
-    fallback: T,
+    fallback: Option<T>,
 ) -> Result<T, AppError>
 where
-    T: FromStr,
+    T: FromStr + Clone,
 {
-    // 1. Docker secrets
-    let docker_secret = Path::new("/run/secrets").join(secret_name);
-    if docker_secret.exists() {
-        match fs::read_to_string(&docker_secret).await {
-            Ok(content) => {
-                if let Ok(parsed) = T::from_str(content.trim()) {
-                    return Ok(parsed);
-                }
-            }
-            Err(e) => {
-                return Err(AppError::FileReadError(format!(
-                    "Failed to read docker secret at {0}, {e}",
-                    docker_secret.display()
-                )));
-            }
-        }
-    }
-
-    // 2. Env var
-    if let Some(env_key) = env_name
-        && let Ok(val) = std::env::var(env_key)
-        && let Ok(parsed) = T::from_str(val.trim())
+    if let Some(value) =
+        get_optional_config_value::<T>(secret_name, env_name, fallback_path).await?
     {
-        return Ok(parsed);
+        return Ok(value);
     }
 
-    // 3. Fallback file path
-    if let Some(path) = fallback_path
-        && path.exists()
-    {
-        match fs::read_to_string(path).await {
-            Ok(content) => {
-                if let Ok(parsed) = T::from_str(content.trim()) {
-                    return Ok(parsed);
-                }
-            }
-            Err(e) => {
-                return Err(AppError::FileReadError(format!(
-                    "Failed to read fallback file at {}, {}",
-                    path.display(),
-                    e
-                )));
-            }
-        }
-    }
-
-    // 4. Final fallback
-    Ok(fallback)
+    fallback.ok_or_else(|| {
+        AppError::EnvironmentVariableNotSetError(env_name.unwrap_or(secret_name).to_string())
+    })
 }
