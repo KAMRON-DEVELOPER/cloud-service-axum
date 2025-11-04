@@ -78,7 +78,7 @@ pub async fn google_oauth_handler(
             .path("/")
             .same_site(SameSite::Lax)
             .max_age(CookieDuration::days(365))
-            .secure(config.cookie_secure.unwrap_or(true));
+            .secure(config.cookie_secure);
     let jar = jar.add(pkce_verifier_cookie);
 
     Ok((jar, Redirect::to(auth_url.as_ref())).into_response())
@@ -143,7 +143,7 @@ pub async fn google_oauth_callback_handler(
             .path("/")
             .same_site(SameSite::Lax)
             .max_age(CookieDuration::days(365))
-            .secure(config.cookie_secure.unwrap_or(true));
+            .secure(config.cookie_secure);
     let jar = jar.add(google_oauth_user_sub_cookie);
 
     let response = Json(RedirectResponse {
@@ -182,7 +182,7 @@ pub async fn github_oauth_handler(
             .path("/")
             .same_site(SameSite::Lax)
             .max_age(CookieDuration::days(365))
-            .secure(config.cookie_secure.unwrap_or(true));
+            .secure(config.cookie_secure);
     let jar = jar.add(pkce_verifier_cookie);
 
     Ok((jar, Redirect::to(auth_url.as_ref())).into_response())
@@ -252,7 +252,7 @@ pub async fn github_oauth_callback_handler(
             .path("/")
             .same_site(SameSite::Lax)
             .max_age(CookieDuration::days(365))
-            .secure(config.cookie_secure.unwrap_or(true));
+            .secure(config.cookie_secure);
     let jar = jar.add(github_oauth_user_sub_cookie);
 
     let response = Json(RedirectResponse {
@@ -285,13 +285,13 @@ pub async fn continue_with_email_handler(
         let new_access = create_token(&config, user.id, TokenType::Access)?;
         let new_refresh = create_token(&config, user.id, TokenType::Refresh)?;
 
-        let max_age_days = config.refresh_token_expire_in_days.unwrap();
+        let max_age_days = config.refresh_token_expire_in_days;
         let refresh_cookie = Cookie::build(("refresh_token", new_refresh.clone()))
             .http_only(true)
             .path("/")
             .same_site(SameSite::Lax)
             .max_age(CookieDuration::days(max_age_days))
-            .secure(config.cookie_secure.unwrap_or(true));
+            .secure(config.cookie_secure);
         let jar = jar.add(refresh_cookie);
 
         let tokens = Tokens {
@@ -373,7 +373,7 @@ pub async fn continue_with_email_handler(
         .path("/")
         .same_site(SameSite::Lax)
         .max_age(CookieDuration::days(365))
-        .secure(config.cookie_secure.unwrap_or(true));
+        .secure(config.cookie_secure);
     let jar = jar.add(email_oauth_user_sub_cookie);
 
     let response = Json(RedirectResponse {
@@ -537,7 +537,7 @@ pub async fn refresh_handler(
     }
 
     let now = Utc::now().timestamp();
-    let threshold_secs = config.refresh_token_renewal_threshold_days.unwrap_or(7) * 24 * 60 * 60;
+    let threshold_secs = config.refresh_token_renewal_threshold_days * 24 * 60 * 60;
     let new_refresh = if claims.exp.saturating_sub(now) < threshold_secs {
         Some(create_token(&config, claims.sub, TokenType::Refresh)?)
     } else {
@@ -546,12 +546,12 @@ pub async fn refresh_handler(
 
     let jar = if is_web {
         if let Some(ref refresh) = new_refresh {
-            let max_age_days = config.refresh_token_expire_in_days.unwrap_or(30);
+            let max_age_days = config.refresh_token_expire_in_days;
             let cookie = Cookie::build(("refresh_token", refresh.clone()))
                 .http_only(true)
                 .same_site(SameSite::Lax)
                 .max_age(CookieDuration::days(max_age_days))
-                .secure(config.cookie_secure.unwrap_or(true));
+                .secure(config.cookie_secure);
             jar.add(cookie)
         } else {
             jar

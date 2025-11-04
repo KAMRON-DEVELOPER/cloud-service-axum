@@ -36,25 +36,12 @@ pub type GithubOAuthClient = oauth2::Client<
 >;
 
 pub fn build_google_oauth_client(config: &Config) -> Result<GoogleOAuthClient, AppError> {
-    let google_client_id =
-        ClientId::new(config.google_oauth_client_id.as_ref().unwrap().to_owned());
-    let google_client_secret = ClientSecret::new(
-        config
-            .google_oauth_client_secret
-            .as_ref()
-            .unwrap()
-            .to_owned(),
-    );
+    let google_client_id = ClientId::new(config.google_oauth_client_id.clone());
+    let google_client_secret = ClientSecret::new(config.google_oauth_client_secret.clone());
 
     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())?;
     let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())?;
-    let redirect_uri = RedirectUrl::new(
-        config
-            .google_oauth_redirect_url
-            .as_ref()
-            .unwrap()
-            .to_owned(),
-    )?;
+    let redirect_uri = RedirectUrl::new(config.google_oauth_redirect_url.clone())?;
     let revocation_url = RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())?;
 
     // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
