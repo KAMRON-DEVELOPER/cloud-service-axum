@@ -100,7 +100,7 @@ impl ZeptoMail {
             template_alias: "poddle-email-verification-link-key-alias".to_string(),
             from: EmailAddress {
                 name: "Poddle Verification".to_string(),
-                address: "verification@poddle.uz".to_string(),
+                address: "verification@kronk.uz".to_string(),
             },
             to: vec![Recipient {
                 email_address: EmailAddress {

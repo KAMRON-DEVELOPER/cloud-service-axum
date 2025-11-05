@@ -2,6 +2,7 @@ use sqlx::{
     PgPool,
     postgres::{PgConnectOptions, PgPoolOptions},
 };
+use tracing::info;
 
 use crate::utilities::{config::Config, errors::AppError};
 
@@ -48,6 +49,8 @@ impl Database {
             .max_connections(100)
             .connect_with(options)
             .await?;
+
+        info!("✅ Database pool created.");
 
         Ok(Self { pool })
     }
