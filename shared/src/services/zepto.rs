@@ -55,7 +55,7 @@ pub struct ZeptoErrorDetail {
 pub struct ZeptoError {
     pub code: String,
     pub message: String,
-    pub request_id: Option<String>,
+    pub request_id: String,
     #[serde(default)]
     pub details: Vec<ZeptoErrorDetail>,
 }
