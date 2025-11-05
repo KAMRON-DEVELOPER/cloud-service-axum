@@ -1,5 +1,6 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tracing::{debug, info};
 
 use crate::utilities::{config::Config, errors::AppError};
@@ -67,6 +68,7 @@ impl ZeptoMail {
         link: String,
         config: &Config,
     ) -> Result<(), AppError> {
+        debug!("Sending email 1");
         let payload = Payload {
             template_alias: "poddle-email-verification-link-key-alias".to_string(),
             from: EmailAddress {
@@ -102,18 +104,27 @@ impl ZeptoMail {
             })?;
 
         let status = res.status();
-        let body = res.json::<ZeptoResponse>().await.map_err(|e| {
-            AppError::ExternalServiceError(format!("Failed to parse ZeptoMail response: {}", e))
-        })?;
+        let text = res.text().await?;
 
-        if status.is_success() {
-            info!("ZeptoMail success: {:?}", body);
-            Ok(())
-        } else {
-            Err(AppError::ExternalServiceError(format!(
-                "ZeptoMail error (status {}): {:?}",
-                status, body
-            )))
+        debug!("zepto response status: {}", status);
+        debug!("zepto response text: {}", text);
+
+        match serde_json::from_str::<ZeptoResponse>(&text) {
+            Ok(body) => {
+                debug!("Parsed successfully: {:?}", body);
+                Ok(())
+            }
+            Err(err) => {
+                debug!("Parsing zepto response to ZeptoResponse error, {:?}", err);
+                let maybe_json: serde_json::Result<Value> = serde_json::from_str(&text);
+                if let Ok(json) = maybe_json {
+                    debug!("Malformed or unexpected JSON structure: {:?}", json);
+                }
+                Err(AppError::ExternalServiceError(format!(
+                    "Failed to parse ZeptoMail response: {}",
+                    err
+                )))
+            }
         }
     }
 }
