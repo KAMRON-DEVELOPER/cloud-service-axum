@@ -255,7 +255,7 @@ pub async fn continue_with_email_handler(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(auth_in): Json<AuthIn>,
 ) -> Result<Response, AppError> {
-    debug!("continue_with_email_schema is {:#?}", auth_in);
+    debug!("auth_in is {:#?}", auth_in);
 
     let maybe_user = auth_in.verify(&database).await?;
 
