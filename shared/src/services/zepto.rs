@@ -114,7 +114,6 @@ impl ZeptoMail {
         };
 
         debug!("Sending email to '{}' with email '{}'", name, to_email);
-        println!("Sending email to '{}' with email '{}'", name, to_email);
 
         let api_key = config.email_service_api_key.clone();
 
@@ -127,17 +126,10 @@ impl ZeptoMail {
             .json(&payload)
             .send()
             .await
-            .map_err(|e| {
-                AppError::ExternalServiceError(format!("ZeptoMail request failed: {}", e))
-            })?;
+            .map_err(|e| AppError::ZeptoServiceError(format!("ZeptoMail request failed: {}", e)))?;
 
-        let status = res.status();
+        let _ = res.status();
         let text = res.text().await?;
-
-        debug!("zepto response status: {}", status);
-        println!("zepto response status: {}", status);
-        debug!("zepto response text: {}", text);
-        println!("zepto response text: {}", text);
 
         match serde_json::from_str::<ZeptoApiResponse>(&text) {
             Ok(ZeptoApiResponse::Success(body)) => {
@@ -146,14 +138,14 @@ impl ZeptoMail {
             }
             Ok(ZeptoApiResponse::Failure { error }) => {
                 debug!("Zepto error: {:?}", error);
-                Err(AppError::ExternalServiceError(format!(
+                Err(AppError::ZeptoServiceError(format!(
                     "ZeptoMail error: {} - {} ({:?})",
                     error.code, error.message, error.details
                 )))
             }
             Err(err) => {
                 debug!("Failed to parse ZeptoMail response: {:?}", err);
-                Err(AppError::ExternalServiceError(format!(
+                Err(AppError::ZeptoServiceError(format!(
                     "Unexpected ZeptoMail response: {}",
                     err
                 )))

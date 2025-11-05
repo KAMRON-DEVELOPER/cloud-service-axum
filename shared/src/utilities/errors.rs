@@ -66,7 +66,7 @@ pub enum AppError {
     #[error("Internal error, {0}")]
     InternalError(String),
     #[error("External service error, {0}")]
-    ExternalServiceError(String),
+    ZeptoServiceError(String),
     #[error("Missing email service api key error")]
     MissingEmailServiceApiKeyError,
     #[error("Missing credentials")]
@@ -318,7 +318,7 @@ impl IntoResponse for AppError {
             ),
             AppError::TonicError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             AppError::InternalError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
-            AppError::ExternalServiceError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
+            AppError::ZeptoServiceError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e),
             AppError::MissingEmailServiceApiKeyError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Missing email service api key".to_string(),
