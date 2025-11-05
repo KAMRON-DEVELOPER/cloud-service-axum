@@ -3,7 +3,7 @@ use redis::{
     Client, ClientTlsConfig, ConnectionAddr, ConnectionInfo, ProtocolVersion, RedisConnectionInfo,
     TlsCertificates, aio::MultiplexedConnection,
 };
-use tracing::debug;
+use tracing::info;
 
 #[derive(Clone)]
 pub struct Redis {
@@ -45,7 +45,7 @@ impl Redis {
             let client = Client::build_with_tls(redis_url, tls_certs)?;
 
             let connection_info = client.get_connection_info();
-            debug!("✅ connection info: {connection_info:?}");
+            info!("✅ connection info: {connection_info:?}");
 
             let connection = client.get_multiplexed_tokio_connection().await?;
 
@@ -54,7 +54,7 @@ impl Redis {
         let client = Client::open(redis_url)?;
 
         let connection_info = client.get_connection_info();
-        debug!("✅ connection info: {connection_info:?}");
+        info!("✅ connection info: {connection_info:?}");
 
         let connection = client.get_multiplexed_tokio_connection().await?;
 
