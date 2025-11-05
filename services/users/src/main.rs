@@ -150,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tracing_layer)
         .with_state(app_state);
 
-    info!("Server running on port {:#?}", config.server_addres);
+    info!("🚀 Server running on port {:#?}", config.server_addres);
     let listener = tokio::net::TcpListener::bind(config.clone().server_addres.clone())
         .await
         .unwrap();

@@ -8,7 +8,6 @@ use crate::{
         },
     },
     services::build_oauth::{GithubOAuthClient, GoogleOAuthClient},
-    utilities::cookie::OptionalOAuthUserIdCookie,
 };
 use bcrypt::{DEFAULT_COST, hash};
 use serde_json::{Value, json};
@@ -49,16 +48,8 @@ use uuid::Uuid;
 pub async fn google_oauth_handler(
     jar: PrivateCookieJar,
     State(config): State<Config>,
-    OptionalOAuthUserIdCookie(optional_oauth_user_id_cookie): OptionalOAuthUserIdCookie,
     State(google_oauth_client): State<GoogleOAuthClient>,
 ) -> Result<Response, AppError> {
-    if optional_oauth_user_id_cookie.is_some() {
-        let response = Json(RedirectResponse {
-            redirect_to: "complete-profile".to_string(),
-        });
-        return Ok((jar, response).into_response());
-    }
-
     let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
 
     let (auth_url, _csrf_token) = google_oauth_client
@@ -158,16 +149,8 @@ pub async fn google_oauth_callback_handler(
 pub async fn github_oauth_handler(
     jar: PrivateCookieJar,
     State(config): State<Config>,
-    OptionalOAuthUserIdCookie(optional_oauth_user_id_cookie): OptionalOAuthUserIdCookie,
     State(github_oauth_client): State<GithubOAuthClient>,
 ) -> Result<Response, AppError> {
-    if optional_oauth_user_id_cookie.is_some() {
-        let response = Json(RedirectResponse {
-            redirect_to: "complete-profile".to_string(),
-        });
-        return Ok((jar, response).into_response());
-    }
-
     let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
 
     let (auth_url, _csrf_token) = github_oauth_client
@@ -417,6 +400,7 @@ pub async fn continue_with_email_handler(
 // -- VERIFY
 // -- =====================
 pub async fn verify_handler(
+    jar: PrivateCookieJar,
     State(config): State<Config>,
     State(database): State<Database>,
     Query(verify_query): Query<VerifyQuery>,
@@ -439,7 +423,16 @@ pub async fn verify_handler(
         0 => Err(AppError::QueryError(
             "User couldn't set to verified".to_string(),
         )),
-        _ => Ok(StatusCode::OK),
+        _ => {
+            let redirect_to = if jar.get("refresh_token").is_none() {
+                "auth".to_string()
+            } else {
+                "dashboard".to_string()
+            };
+
+            let response = Json(RedirectResponse { redirect_to });
+            return Ok((jar, response).into_response());
+        }
     }
 }
 
