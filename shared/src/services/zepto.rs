@@ -1,13 +1,12 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::utilities::{config::Config, errors::AppError};
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-struct ZeptoResponseData {
+pub struct ZeptoResponseData {
     code: String,
     message: String,
     #[serde(default)]
@@ -16,31 +15,59 @@ struct ZeptoResponseData {
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-struct ZeptoResponse {
-    data: Vec<ZeptoResponseData>,
-    message: String,
-    request_id: String,
-    object: String,
+pub struct ZeptoResponse {
+    pub data: Vec<ZeptoResponseData>,
+    pub message: String,
+    pub request_id: String,
+    pub object: String,
 }
 
 #[derive(Serialize)]
-struct EmailAddress {
-    name: String,
-    address: String,
+pub struct EmailAddress {
+    pub name: String,
+    pub address: String,
 }
 
 #[derive(Serialize)]
-struct Recipient {
-    email_address: EmailAddress,
+pub struct Recipient {
+    pub email_address: EmailAddress,
 }
 
 #[derive(Serialize)]
-struct Payload {
-    template_alias: String,
-    from: EmailAddress,
-    to: Vec<Recipient>,
-    merge_info: serde_json::Value,
+pub struct Payload {
+    pub template_alias: String,
+    pub from: EmailAddress,
+    pub to: Vec<Recipient>,
+    pub merge_info: serde_json::Value,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct ZeptoErrorDetail {
+    pub code: String,
+    #[serde(default)]
+    pub target_value: Option<String>,
+    pub message: String,
+    #[serde(default)]
+    pub target: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ZeptoError {
+    pub code: String,
+    pub message: String,
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub details: Vec<ZeptoErrorDetail>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ZeptoApiResponse {
+    Success(ZeptoResponse),
+    Failure { error: ZeptoError },
+}
+
+// ---------------------------------- ZeptoMail ----------------------------------
 
 pub struct ZeptoMail {
     api_url: String,
@@ -87,6 +114,7 @@ impl ZeptoMail {
         };
 
         debug!("Sending email to '{}' with email '{}'", name, to_email);
+        println!("Sending email to '{}' with email '{}'", name, to_email);
 
         let api_key = config.email_service_api_key.clone();
 
@@ -107,21 +135,26 @@ impl ZeptoMail {
         let text = res.text().await?;
 
         debug!("zepto response status: {}", status);
+        println!("zepto response status: {}", status);
         debug!("zepto response text: {}", text);
+        println!("zepto response text: {}", text);
 
-        match serde_json::from_str::<ZeptoResponse>(&text) {
-            Ok(body) => {
-                debug!("Parsed successfully: {:?}", body);
+        match serde_json::from_str::<ZeptoApiResponse>(&text) {
+            Ok(ZeptoApiResponse::Success(body)) => {
+                debug!("Zepto success: {:?}", body);
                 Ok(())
             }
-            Err(err) => {
-                debug!("Parsing zepto response to ZeptoResponse error, {:?}", err);
-                let maybe_json: serde_json::Result<Value> = serde_json::from_str(&text);
-                if let Ok(json) = maybe_json {
-                    debug!("Malformed or unexpected JSON structure: {:?}", json);
-                }
+            Ok(ZeptoApiResponse::Failure { error }) => {
+                debug!("Zepto error: {:?}", error);
                 Err(AppError::ExternalServiceError(format!(
-                    "Failed to parse ZeptoMail response: {}",
+                    "ZeptoMail error: {} - {} ({:?})",
+                    error.code, error.message, error.details
+                )))
+            }
+            Err(err) => {
+                debug!("Failed to parse ZeptoMail response: {:?}", err);
+                Err(AppError::ExternalServiceError(format!(
+                    "Unexpected ZeptoMail response: {}",
                     err
                 )))
             }
