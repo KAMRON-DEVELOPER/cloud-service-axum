@@ -26,7 +26,7 @@ impl Kubernetes {
                 KubeConfig::infer().await?
             };
 
-            info!("Connected from local environment!");
+            info!("✅ Connected from local environment!");
             Client::try_from(kube_config)?
         };
 
