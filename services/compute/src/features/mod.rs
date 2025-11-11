@@ -7,10 +7,7 @@ pub mod websocket;
 
 use crate::utilities::app_state::AppState;
 
-use axum::{
-    Router,
-    routing::{delete, get, patch},
-};
+use axum::{Router, routing::get};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
