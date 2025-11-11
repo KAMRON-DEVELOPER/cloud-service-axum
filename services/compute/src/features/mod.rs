@@ -17,18 +17,18 @@ pub fn routes() -> Router<AppState> {
             get(handlers::get_projects).post(handlers::create_project),
         )
         .route(
-            "/api/v1/project/:id",
+            "/api/v1/project/{project_id}",
             get(handlers::get_project)
                 .patch(handlers::update_project)
                 .delete(handlers::delete_project),
         )
         // Deployments
         .route(
-            "/api/v1/project/:project_id/deployments",
+            "/api/v1/projects/{project_id}/deployments",
             get(handlers::get_deployments).post(handlers::create_deployment),
         )
         .route(
-            "/api/v1/deployment/:id",
+            "/api/v1/projects/{project_id}/deployments/{deployment_id}",
             get(handlers::get_deployment)
                 .patch(handlers::scale_deployment)
                 .delete(handlers::delete_deployment),

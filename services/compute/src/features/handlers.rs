@@ -179,7 +179,7 @@ pub async fn get_deployments(
 
 pub async fn get_deployment(
     claims: Claims,
-    Path(deployment_id): Path<Uuid>,
+    Path((_, deployment_id)): Path<(Uuid, Uuid)>,
     State(database): State<Database>,
 ) -> Result<impl IntoResponse, AppError> {
     let user_id: Uuid = claims.sub;
@@ -220,7 +220,7 @@ pub async fn create_deployment(
 
 pub async fn scale_deployment(
     claims: Claims,
-    Path(deployment_id): Path<Uuid>,
+    Path((_, deployment_id)): Path<(Uuid, Uuid)>,
     State(database): State<Database>,
     State(kubernetes): State<Kubernetes>,
     Json(req): Json<ScaleDeploymentRequest>,
@@ -243,7 +243,7 @@ pub async fn scale_deployment(
 
 pub async fn delete_deployment(
     claims: Claims,
-    Path(deployment_id): Path<Uuid>,
+    Path((_, deployment_id)): Path<(Uuid, Uuid)>,
     State(database): State<Database>,
     State(kubernetes): State<Kubernetes>,
 ) -> Result<impl IntoResponse, AppError> {
