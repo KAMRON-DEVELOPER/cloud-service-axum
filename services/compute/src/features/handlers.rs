@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 use shared::{
+    schemas::ListResponse,
     services::database::Database,
     utilities::{config::Config, errors::AppError, jwt::Claims},
 };
@@ -14,7 +15,10 @@ use validator::Validate;
 use crate::{
     features::{
         repository::{DeploymentRepository, ProjectRepository},
-        schemas::*,
+        schemas::{
+            CreateDeploymentRequest, CreateProjectRequest, DeploymentResponse, MessageResponse,
+            ProjectResponse, ScaleDeploymentRequest, UpdateProjectRequest,
+        },
     },
     services::{build_kubernetes::Kubernetes, kubernetes::DeploymentService},
 };

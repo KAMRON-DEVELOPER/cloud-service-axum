@@ -6,15 +6,10 @@ pub mod schemas;
 
 use crate::utilities::app_state::AppState;
 
-use axum::{
-    Router,
-    routing::{delete, get, patch, post},
-};
+use axum::{Router, routing::get};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/v1/profile", get(handlers::get_balance))
-        .route("/api/v1/profile", patch(handlers::update_balance))
-        .route("/api/v1/profile", delete(handlers::delete_balance))
-        .route("/api/v1/auth/refresh", post(handlers::cerate_balance))
+        .route("/api/v1/balance", get(handlers::get_balance))
+        .route("/api/v1/transactions", get(handlers::get_transactions))
 }

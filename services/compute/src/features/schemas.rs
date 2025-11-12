@@ -148,12 +148,6 @@ pub struct DeploymentEventResponse {
 // ============================================
 
 #[derive(Serialize, Debug)]
-pub struct ListResponse<T> {
-    pub data: Vec<T>,
-    pub total: usize,
-}
-
-#[derive(Serialize, Debug)]
 pub struct MessageResponse {
     pub message: String,
 }

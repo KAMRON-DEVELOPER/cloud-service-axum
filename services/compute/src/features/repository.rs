@@ -111,6 +111,21 @@ impl DeploymentRepository {
         project_id: Uuid,
         user_id: Uuid,
     ) -> Result<Vec<Deployment>, sqlx::Error> {
+        let row = sqlx::query!(
+            "
+                SELECT COUNT(*) as count
+                FROM deployments d
+                INNER JOIN projects p ON d.project_id = p.id
+                WHERE d.project_id = $1 AND p.owner_id = $2
+            ",
+            project_id,
+            user_id
+        )
+        .fetch_one(pool)
+        .await?;
+
+        let total = row.count.unwrap_or(0);
+
         sqlx::query_as::<_, Deployment>(
             r#"
             SELECT d.*

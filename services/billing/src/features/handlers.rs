@@ -1,18 +1,33 @@
-use axum::response::IntoResponse;
-use shared::utilities::errors::AppError;
+use axum::{Json, extract::State, response::IntoResponse};
+use shared::{
+    schemas::ListResponse,
+    services::database::Database,
+    utilities::{errors::AppError, jwt::Claims},
+};
 
-pub async fn get_balance() -> Result<impl IntoResponse, AppError> {
-    Ok(())
+use crate::features::repository::BillingRepository;
+
+pub async fn get_balance(
+    claims: Claims,
+    State(database): State<Database>,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id = claims.sub;
+
+    let balance = BillingRepository::get_user_balance(&database.pool, user_id).await?;
+
+    Ok(Json(balance))
 }
 
-pub async fn update_balance() -> Result<impl IntoResponse, AppError> {
-    Ok(())
-}
+pub async fn get_transactions(
+    claims: Claims,
+    State(database): State<Database>,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id = claims.sub;
 
-pub async fn delete_balance() -> Result<impl IntoResponse, AppError> {
-    Ok(())
-}
+    let transactions = BillingRepository::get_transactions(&database.pool, user_id).await?;
 
-pub async fn cerate_balance() -> Result<impl IntoResponse, AppError> {
-    Ok(())
+    Ok(Json(ListResponse {
+        total: transactions.len(),
+        data: transactions,
+    }))
 }

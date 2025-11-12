@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 use shared::{
+    schemas::ListResponse,
     services::database::Database,
     utilities::{config::Config, errors::AppError, jwt::Claims},
 };
@@ -15,8 +16,8 @@ use crate::{
     features::{
         repository::{DeploymentRepository, ProjectRepository},
         schemas::{
-            CreateDeploymentRequest, CreateProjectRequest, DeploymentResponse, ListResponse,
-            MessageResponse, ProjectResponse, ScaleDeploymentRequest,
+            CreateDeploymentRequest, CreateProjectRequest, DeploymentResponse, MessageResponse,
+            ProjectResponse, ScaleDeploymentRequest,
         },
     },
     services::{build_kubernetes::Kubernetes, kubernetes::DeploymentService},
