@@ -53,9 +53,9 @@ impl ProjectRepository {
     ) -> Result<Project, sqlx::Error> {
         sqlx::query_as::<_, Project>(
             r#"
-            SELECT id, owner_id, name, description, created_at, updated_at
-            FROM projects
-            WHERE id = $1 AND owner_id = $2
+                SELECT id, owner_id, name, description, created_at, updated_at
+                FROM projects
+                WHERE id = $1 AND owner_id = $2
             "#,
         )
         .bind(project_id)
@@ -72,9 +72,9 @@ impl ProjectRepository {
     ) -> Result<Project, sqlx::Error> {
         sqlx::query_as::<_, Project>(
             r#"
-            INSERT INTO projects (owner_id, name, description)
-            VALUES ($1, $2, $3)
-            RETURNING id, owner_id, name, description, created_at, updated_at
+                INSERT INTO projects (owner_id, name, description)
+                VALUES ($1, $2, $3)
+                RETURNING id, owner_id, name, description, created_at, updated_at
             "#,
         )
         .bind(user_id)
@@ -93,11 +93,11 @@ impl ProjectRepository {
     ) -> Result<Project, sqlx::Error> {
         sqlx::query_as::<_, Project>(
             r#"
-            UPDATE projects
-            SET name = COALESCE($3, name),
-                description = COALESCE($4, description)
-            WHERE id = $1 AND owner_id = $2
-            RETURNING id, owner_id, name, description, created_at, updated_at
+                UPDATE projects
+                SET name = COALESCE($3, name),
+                    description = COALESCE($4, description)
+                WHERE id = $1 AND owner_id = $2
+                RETURNING id, owner_id, name, description, created_at, updated_at
             "#,
         )
         .bind(project_id)
@@ -111,8 +111,8 @@ impl ProjectRepository {
     pub async fn delete(pool: &PgPool, project_id: Uuid, user_id: Uuid) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
-            DELETE FROM projects
-            WHERE id = $1 AND owner_id = $2
+                DELETE FROM projects
+                WHERE id = $1 AND owner_id = $2
             "#,
         )
         .bind(project_id)
@@ -134,11 +134,11 @@ impl DeploymentRepository {
     ) -> Result<Vec<Deployment>, sqlx::Error> {
         sqlx::query_as::<_, Deployment>(
             r#"
-            SELECT d.*
-            FROM deployments d
-            INNER JOIN projects p ON d.project_id = p.id
-            WHERE d.project_id = $1 AND p.owner_id = $2
-            ORDER BY d.created_at DESC
+                SELECT d.*
+                FROM deployments d
+                INNER JOIN projects p ON d.project_id = p.id
+                WHERE d.project_id = $1 AND p.owner_id = $2
+                ORDER BY d.created_at DESC
             "#,
         )
         .bind(project_id)
@@ -154,10 +154,10 @@ impl DeploymentRepository {
     ) -> Result<Deployment, sqlx::Error> {
         sqlx::query_as::<_, Deployment>(
             r#"
-            SELECT d.*
-            FROM deployments d
-            INNER JOIN projects p ON d.project_id = p.id
-            WHERE d.id = $1 AND p.owner_id = $2
+                SELECT d.*
+                FROM deployments d
+                INNER JOIN projects p ON d.project_id = p.id
+                WHERE d.id = $1 AND p.owner_id = $2
             "#,
         )
         .bind(deployment_id)
@@ -181,12 +181,12 @@ impl DeploymentRepository {
     ) -> Result<Deployment, sqlx::Error> {
         sqlx::query_as::<_, Deployment>(
             r#"
-            INSERT INTO deployments (
-                user_id, project_id, name, image, env_vars, replicas,
-                resources, labels, cluster_namespace, cluster_deployment_name
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING *
+                INSERT INTO deployments (
+                    user_id, project_id, name, image, env_vars, replicas,
+                    resources, labels, cluster_namespace, cluster_deployment_name
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                RETURNING *
             "#,
         )
         .bind(user_id)
@@ -210,9 +210,9 @@ impl DeploymentRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
-            UPDATE deployments
-            SET status = $2
-            WHERE id = $1
+                UPDATE deployments
+                SET status = $2
+                WHERE id = $1
             "#,
         )
         .bind(deployment_id)
@@ -231,11 +231,11 @@ impl DeploymentRepository {
     ) -> Result<Deployment, sqlx::Error> {
         sqlx::query_as::<_, Deployment>(
             r#"
-            UPDATE deployments d
-            SET replicas = $3
-            FROM projects p
-            WHERE d.id = $1 AND d.project_id = p.id AND p.owner_id = $2
-            RETURNING d.*
+                UPDATE deployments d
+                SET replicas = $3
+                FROM projects p
+                WHERE d.id = $1 AND d.project_id = p.id AND p.owner_id = $2
+                RETURNING d.*
             "#,
         )
         .bind(deployment_id)
@@ -252,9 +252,9 @@ impl DeploymentRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
-            DELETE FROM deployments d
-            USING projects p
-            WHERE d.id = $1 AND d.project_id = p.id AND p.owner_id = $2
+                DELETE FROM deployments d
+                USING projects p
+                WHERE d.id = $1 AND d.project_id = p.id AND p.owner_id = $2
             "#,
         )
         .bind(deployment_id)
@@ -277,9 +277,9 @@ impl DeploymentSecretRepository {
     ) -> Result<DeploymentSecret, sqlx::Error> {
         sqlx::query_as::<_, DeploymentSecret>(
             r#"
-            INSERT INTO deployment_secrets (deployment_id, key, value)
-            VALUES ($1, $2, $3)
-            RETURNING *
+                INSERT INTO deployment_secrets (deployment_id, key, value)
+                VALUES ($1, $2, $3)
+                RETURNING *
             "#,
         )
         .bind(deployment_id)
@@ -295,9 +295,9 @@ impl DeploymentSecretRepository {
     ) -> Result<Vec<DeploymentSecret>, sqlx::Error> {
         sqlx::query_as::<_, DeploymentSecret>(
             r#"
-            SELECT * FROM deployment_secrets
-            WHERE deployment_id = $1
-            ORDER BY created_at ASC
+                SELECT * FROM deployment_secrets
+                WHERE deployment_id = $1
+                ORDER BY created_at ASC
             "#,
         )
         .bind(deployment_id)
@@ -328,9 +328,9 @@ impl DeploymentEventRepository {
     ) -> Result<DeploymentEvent, sqlx::Error> {
         sqlx::query_as::<_, DeploymentEvent>(
             r#"
-            INSERT INTO deployment_events (deployment_id, event_type, message)
-            VALUES ($1, $2, $3)
-            RETURNING *
+                INSERT INTO deployment_events (deployment_id, event_type, message)
+                VALUES ($1, $2, $3)
+                RETURNING *
             "#,
         )
         .bind(deployment_id)
@@ -347,10 +347,10 @@ impl DeploymentEventRepository {
     ) -> Result<Vec<DeploymentEvent>, sqlx::Error> {
         sqlx::query_as::<_, DeploymentEvent>(
             r#"
-            SELECT * FROM deployment_events
-            WHERE deployment_id = $1
-            ORDER BY created_at DESC
-            LIMIT $2
+                SELECT * FROM deployment_events
+                WHERE deployment_id = $1
+                ORDER BY created_at DESC
+                LIMIT $2
             "#,
         )
         .bind(deployment_id)

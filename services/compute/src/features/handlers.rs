@@ -17,7 +17,7 @@ use crate::{
         repository::{DeploymentRepository, ProjectRepository},
         schemas::{
             CreateDeploymentRequest, CreateProjectRequest, DeploymentResponse, MessageResponse,
-            ProjectResponse, ScaleDeploymentRequest, UpdateProjectRequest,
+            ScaleDeploymentRequest, UpdateProjectRequest,
         },
     },
     services::{build_kubernetes::Kubernetes, kubernetes::DeploymentService},
@@ -37,20 +37,9 @@ pub async fn get_projects(
     let (projects, total) =
         ProjectRepository::get_many_by_user_id(&database.pool, user_id, pagination).await?;
 
-    let response: Vec<ProjectResponse> = projects
-        .into_iter()
-        .map(|p| ProjectResponse {
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            created_at: p.created_at,
-            updated_at: p.updated_at,
-        })
-        .collect();
-
     Ok(Json(ListResponse {
-        data: response,
-        total, // total: usize::try_from(total).unwrap_or_else(|_| 0),
+        data: projects,
+        total,
     }))
 }
 
@@ -63,13 +52,7 @@ pub async fn get_project(
 
     let project = ProjectRepository::get_one_by_id(&database.pool, project_id, user_id).await?;
 
-    Ok(Json(ProjectResponse {
-        id: project.id,
-        name: project.name,
-        description: project.description,
-        created_at: project.created_at,
-        updated_at: project.updated_at,
-    }))
+    Ok(Json(project))
 }
 
 pub async fn create_project(
@@ -89,16 +72,7 @@ pub async fn create_project(
     )
     .await?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(ProjectResponse {
-            id: project.id,
-            name: project.name,
-            description: project.description,
-            created_at: project.created_at,
-            updated_at: project.updated_at,
-        }),
-    ))
+    Ok((StatusCode::CREATED, Json(project)))
 }
 
 pub async fn update_project(
@@ -120,13 +94,7 @@ pub async fn update_project(
     )
     .await?;
 
-    Ok(Json(ProjectResponse {
-        id: project.id,
-        name: project.name,
-        description: project.description,
-        created_at: project.created_at,
-        updated_at: project.updated_at,
-    }))
+    Ok(Json(project))
 }
 
 pub async fn delete_project(

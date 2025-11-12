@@ -17,7 +17,7 @@ use crate::features::models::{DeploymentStatus, ResourceSpec};
 pub struct CreateProjectRequest {
     #[validate(length(min = 1, max = 150))]
     pub name: String,
-    #[validate(length(max = 1000))]
+    #[validate(length(max = 100))]
     pub description: Option<String>,
 }
 
@@ -26,18 +26,8 @@ pub struct CreateProjectRequest {
 pub struct UpdateProjectRequest {
     #[validate(length(min = 1, max = 150))]
     pub name: Option<String>,
-    #[validate(length(max = 1000))]
+    #[validate(length(max = 100))]
     pub description: Option<String>,
-}
-
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ProjectResponse {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 // ============================================
