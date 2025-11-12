@@ -12,9 +12,7 @@ pub async fn get_balance(
     State(database): State<Database>,
 ) -> Result<impl IntoResponse, AppError> {
     let user_id = claims.sub;
-
     let balance = BillingRepository::get_user_balance(&database.pool, user_id).await?;
-
     Ok(Json(balance))
 }
 
@@ -27,7 +25,7 @@ pub async fn get_transactions(
     let transactions = BillingRepository::get_transactions(&database.pool, user_id).await?;
 
     Ok(Json(ListResponse {
-        total: transactions.len(),
+        total: i64::try_from(transactions.len()).unwrap_or_else(|_| 0),
         data: transactions,
     }))
 }

@@ -10,6 +10,9 @@ use axum::{Router, routing::get};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/v1/balance", get(handlers::get_balance))
-        .route("/api/v1/transactions", get(handlers::get_transactions))
+        .route("/api/v1/billing/balance", get(handlers::get_balance))
+        .route(
+            "/api/v1/billing/transactions",
+            get(handlers::get_transactions),
+        )
 }

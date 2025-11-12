@@ -1,11 +1,11 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
 use shared::{
-    schemas::ListResponse,
+    schemas::{ListResponse, Pagination},
     services::database::Database,
     utilities::{config::Config, errors::AppError, jwt::Claims},
 };
@@ -29,11 +29,13 @@ use crate::{
 
 pub async fn get_projects(
     claims: Claims,
+    Query(pagination): Query<Pagination>,
     State(database): State<Database>,
 ) -> Result<impl IntoResponse, AppError> {
     let user_id: Uuid = claims.sub;
 
-    let projects = ProjectRepository::get_all_by_user_id(&database.pool, user_id).await?;
+    let (projects, total) =
+        ProjectRepository::get_many_by_user_id(&database.pool, user_id, pagination).await?;
 
     let response: Vec<ProjectResponse> = projects
         .into_iter()
@@ -47,8 +49,8 @@ pub async fn get_projects(
         .collect();
 
     Ok(Json(ListResponse {
-        total: response.len(),
         data: response,
+        total, // total: usize::try_from(total).unwrap_or_else(|_| 0),
     }))
 }
 
@@ -59,7 +61,7 @@ pub async fn get_project(
 ) -> Result<impl IntoResponse, AppError> {
     let user_id: Uuid = claims.sub;
 
-    let project = ProjectRepository::get_by_id(&database.pool, project_id, user_id).await?;
+    let project = ProjectRepository::get_one_by_id(&database.pool, project_id, user_id).await?;
 
     Ok(Json(ProjectResponse {
         id: project.id,
@@ -176,7 +178,7 @@ pub async fn get_deployments(
         .collect();
 
     Ok(Json(ListResponse {
-        total: response.len(),
+        total: i64::try_from(response.len()).unwrap_or_else(|_| 0),
         data: response,
     }))
 }
@@ -206,7 +208,7 @@ pub async fn create_deployment(
     let user_id: Uuid = claims.sub;
 
     // Verify project ownership
-    ProjectRepository::get_by_id(&database.pool, project_id, user_id).await?;
+    ProjectRepository::get_one_by_id(&database.pool, project_id, user_id).await?;
 
     let deployment = DeploymentService::create(
         &database.pool,

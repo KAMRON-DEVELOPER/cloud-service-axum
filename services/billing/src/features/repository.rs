@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres};
 use uuid::Uuid;
 
 use crate::features::models::{Balance, Transaction};
@@ -7,12 +7,12 @@ pub struct BillingRepository;
 
 impl BillingRepository {
     pub async fn get_user_balance(pool: &PgPool, user_id: Uuid) -> Result<Balance, sqlx::Error> {
-        sqlx::query_as::<_, Balance>(
-            r"
+        sqlx::query_as::<Postgres, Balance>(
+            r#"
                 SELECT id, user_id, amount, currency, created_at, updated_at
                 FROM balances
                 WHERE user_id = $1
-            ",
+            "#,
         )
         .bind(user_id)
         .fetch_one(pool)

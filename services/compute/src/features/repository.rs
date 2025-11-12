@@ -1,3 +1,4 @@
+use shared::schemas::Pagination;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -8,24 +9,44 @@ use crate::features::models::{
 pub struct ProjectRepository;
 
 impl ProjectRepository {
-    pub async fn get_all_by_user_id(
+    pub async fn get_many_by_user_id(
         pool: &PgPool,
         user_id: Uuid,
-    ) -> Result<Vec<Project>, sqlx::Error> {
-        sqlx::query_as::<_, Project>(
+        pagination: Pagination,
+    ) -> Result<(Vec<Project>, i64), sqlx::Error> {
+        let projects = sqlx::query_as::<_, Project>(
             r#"
-            SELECT id, owner_id, name, description, created_at, updated_at
-            FROM projects
-            WHERE owner_id = $1
-            ORDER BY created_at DESC
+                SELECT id, owner_id, name, description, created_at, updated_at
+                FROM projects
+                WHERE owner_id = $1
+                ORDER BY created_at DESC
+                LIMIT $2
+                OFFSET $3
             "#,
         )
         .bind(user_id)
+        .bind(pagination.limit)
+        .bind(pagination.offset)
         .fetch_all(pool)
-        .await
+        .await?;
+
+        let row = sqlx::query!(
+            r#"
+                SELECT COUNT(*) as count
+                FROM projects d
+                WHERE owner_id = $1
+            "#,
+            user_id
+        )
+        .fetch_one(pool)
+        .await?;
+
+        let total = row.count.unwrap_or(0);
+
+        Ok((projects, total))
     }
 
-    pub async fn get_by_id(
+    pub async fn get_one_by_id(
         pool: &PgPool,
         project_id: Uuid,
         user_id: Uuid,
@@ -111,21 +132,6 @@ impl DeploymentRepository {
         project_id: Uuid,
         user_id: Uuid,
     ) -> Result<Vec<Deployment>, sqlx::Error> {
-        let row = sqlx::query!(
-            "
-                SELECT COUNT(*) as count
-                FROM deployments d
-                INNER JOIN projects p ON d.project_id = p.id
-                WHERE d.project_id = $1 AND p.owner_id = $2
-            ",
-            project_id,
-            user_id
-        )
-        .fetch_one(pool)
-        .await?;
-
-        let total = row.count.unwrap_or(0);
-
         sqlx::query_as::<_, Deployment>(
             r#"
             SELECT d.*
