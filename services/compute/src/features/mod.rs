@@ -17,7 +17,7 @@ pub fn routes() -> Router<AppState> {
             get(handlers::get_projects).post(handlers::create_project),
         )
         .route(
-            "/api/v1/project/{project_id}",
+            "/api/v1/projects/{project_id}",
             get(handlers::get_project)
                 .patch(handlers::update_project)
                 .delete(handlers::delete_project),
