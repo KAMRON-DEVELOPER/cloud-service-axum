@@ -15,18 +15,18 @@ use crate::features::models::{DeploymentStatus, ResourceSpec};
 #[derive(Deserialize, Validate, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateProjectRequest {
-    #[validate(length(min = 1, max = 150))]
+    #[validate(length(min = 1, max = 20))]
     pub name: String,
-    #[validate(length(max = 100))]
+    #[validate(length(max = 180))]
     pub description: Option<String>,
 }
 
 #[derive(Deserialize, Validate, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProjectRequest {
-    #[validate(length(min = 1, max = 150))]
+    #[validate(length(min = 1, max = 20))]
     pub name: Option<String>,
-    #[validate(length(max = 100))]
+    #[validate(length(max = 180))]
     pub description: Option<String>,
 }
 
